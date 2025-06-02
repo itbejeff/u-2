@@ -22,12 +22,16 @@
 
         <!-- Set the background colour of the document -->
         <style>
-            body {
+            body, html {
                 background: #000;
                 color: #cccccc;
                 margin: 0px;
                 padding: 0px;
                 border: 0px;
+                height: 100%;
+                width: 100%;
+                margin: 0;
+                overflow: hidden;
             }
 
             canvas {
@@ -38,6 +42,9 @@
                 margin: 0px;
                 padding: 0px;
                 border: 0px;
+                display: block;
+                width: 100% !important;
+                height: 100% !important;
             }
             :-webkit-full-screen #canvas {
                 width: 100%;
@@ -96,7 +103,7 @@
             
 
             <!-- Create the canvas element the game draws to -->
-            <canvas id="canvas" width="640" height="480" >
+            <canvas id="canvas">
                 <p>Your browser doesn't support HTML5 canvas.</p>
             </canvas>
         </div>
@@ -106,12 +113,59 @@
 
         <!-- Builtin injector for injecting runner path -->
         
+        <script>
+            function resizeCanvasToPreset() {
+                const canvas = document.getElementById('canvas');
+                const container = document.getElementById('gm4html5_div_id');
 
-        <script>window.onload = GameMaker_Init;</script>
+                const screenW = window.innerWidth;
+                const screenH = window.innerHeight;
 
-        <!-- Builtin injector for injecting google analytics code -->
-        
+                // Standard resolution presets
+                const resolutions = [
+                    { w: 1280, h: 720 },     // 720p
+                    { w: 1920, h: 1080 },    // 1080p
+                    { w: 2560, h: 1440 },    // 1440p
+                    { w: 3840, h: 2160 }     // 4K
+                ];
 
+                // Find the highest resolution that fits
+                let chosen = resolutions[0];
+                for (let i = 0; i < resolutions.length; i++) {
+                    if (screenW >= resolutions[i].w && screenH >= resolutions[i].h) {
+                        chosen = resolutions[i];
+                    }
+                }
+
+                // Update canvas resolution (internal pixels)
+                canvas.width = chosen.w;
+                canvas.height = chosen.h;
+
+                // Stretch canvas visually to fill screen
+                canvas.style.width = screenW + 'px';
+                canvas.style.height = screenH + 'px';
+
+                // Update container to fill screen
+                container.style.width = screenW + 'px';
+                container.style.height = screenH + 'px';
+
+                // Optional: apply crisp scaling for pixel art
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.imageSmoothingEnabled = false;
+                }
+            }
+
+            // Listen for all resize events and update immediately
+            window.addEventListener('load', () => {
+                resizeCanvasToPreset();
+                GameMaker_Init();
+            });
+            window.addEventListener('resize', resizeCanvasToPreset);
+            window.addEventListener('orientationchange', resizeCanvasToPreset);
+        </script>
+
+        <!-- Builtin injector for injecting runner code -->
     </body>
 
     <!-- Custom PostBody code is injected here -->
