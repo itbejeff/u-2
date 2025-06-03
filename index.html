@@ -1,173 +1,230 @@
 <!DOCTYPE html>
 <html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta charset="utf-8"/>
+    <meta http-equiv="pragma" content="no-cache"/>
+    <title>Created with GameMaker</title>
+    <style>
+        body, html {
+            background: #000;
+            color: #000;
+            margin: 0px;
+            padding: 0px;
+            border: 0px;
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
 
-    <!-- Custom PreHead code is injected here -->
-    
+        canvas {
+            image-rendering: optimizeSpeed;
+            -webkit-interpolation-mode: nearest-neighbor;
+            -ms-touch-action: none;
+            touch-action: none;
+            margin: 0px;
+            padding: 0px;
+            border: 0px;
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
 
-    <head>
-        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name ="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta charset="utf-8"/>
+        :-webkit-full-screen #canvas {
+            width: 100%;
+            height: 100%;
+        }
 
-        <!-- Builtin injector for disabling cache -->
-        <meta http-equiv="pragma" content="no-cache"/>
+        :-webkit-full-screen {
+            width: 100%;
+            height: 100%;
+        }
 
-        <!-- Set the title bar of the page -->
-        <title>Created with GameMaker</title>
+        div.gm4html5_div_class {
+            margin: 0px;
+            padding: 0px;
+            border: 0px;
+        }
 
-        <!-- Custom PreStyle code is injected here -->
-        
+        div.gm4html5_login {
+            padding: 20px;
+            position: absolute;
+            border: solid 2px #000000;
+            background-color: #404040;
+            color: #00ff00;
+            border-radius: 15px;
+            box-shadow: #101010 20px 20px 40px;
+        }
 
-        <!-- Set the background colour of the document -->
-        <style>
-            body, html {
-                background: #000;
-                color: #000;
-                margin: 0px;
-                padding: 0px;
-                border: 0px;
-                height: 100%;
-                width: 100%;
-                margin: 0;
-                overflow: hidden;
-            }
+        div.gm4html5_cancel_button {
+            float: right;
+        }
 
-            canvas {
-                image-rendering: optimizeSpeed;
-                -webkit-interpolation-mode: nearest-neighbor;
-                -ms-touch-action: none;
-                touch-action: none;
-                margin: 0px;
-                padding: 0px;
-                border: 0px;
-                display: block;
-                width: 100% !important;
-                height: 100% !important;
-            }
-            :-webkit-full-screen #canvas {
-                width: 100%;
-                height: 100%;
-            }
-            :-webkit-full-screen {
-                width: 100%;
-                height: 100%;
-            }
-            
-            /* Custom Runner Styles */
-            div.gm4html5_div_class {
-                margin: 0px;
-                padding: 0px;
-                border: 0px;
-            }
-            div.gm4html5_login {
-                padding: 20px;
-                position: absolute;
-                border: solid 2px #000000;
-                background-color: #404040;
-                color:#00ff00;
-                border-radius: 15px;
-                box-shadow: #101010 20px 20px 40px;
-            }
-            div.gm4html5_cancel_button {
-                float: right;
-            }
-            div.gm4html5_login_button {
-                float: left;
-            }
-            div.gm4html5_login_header {
-                text-align: center;
-            }
-            /* END - Custom Runner Styles */
-            
-        </style>
+        div.gm4html5_login_button {
+            float: left;
+        }
 
-        <!-- Custom PostStyle code is injected here -->
-        
+        div.gm4html5_login_header {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="gm4html5_div_class" id="gm4html5_div_id">
+        <canvas id="canvas">
+            <p>Your browser doesn't support HTML5 canvas.</p>
+        </canvas>
+    </div>
 
-        <!-- Builtin injector for injecting flurry analytics code -->
-        
-    </head>
+    <script type="text/javascript" src="html5game/NXTALE.js?cachebust=938571485"></script>
 
-    <!-- Custom PostHead code is injected here -->
-    
+    <script>
+        function resizeCanvasToPreset() {
+            const canvas = document.getElementById('canvas');
+            const container = document.getElementById('gm4html5_div_id');
 
-    <!-- Custom PreBody code is injected here -->
-    
+            const screenW = window.innerWidth;
+            const screenH = window.innerHeight;
 
-    <body>
-        <div class="gm4html5_div_class" id="gm4html5_div_id">
-            
-            <!-- Builtin injector for splash screen -->
-            
+            const resolutions = [
+                { w: 1280, h: 720 },
+                { w: 1920, h: 1080 },
+                { w: 2560, h: 1440 },
+                { w: 3840, h: 2160 }
+            ];
 
-            <!-- Create the canvas element the game draws to -->
-            <canvas id="canvas">
-                <p>Your browser doesn't support HTML5 canvas.</p>
-            </canvas>
-        </div>
-
-        <!-- Run the game code -->
-        <script type="text/javascript" src="html5game/NXTALE.js?cachebust=938571485"></script>
-
-        <!-- Builtin injector for injecting runner path -->
-        
-        <script>
-            function resizeCanvasToPreset() {
-                const canvas = document.getElementById('canvas');
-                const container = document.getElementById('gm4html5_div_id');
-
-                const screenW = window.innerWidth;
-                const screenH = window.innerHeight;
-
-                // Standard resolution presets
-                const resolutions = [
-                    { w: 1280, h: 720 },     // 720p
-                    { w: 1920, h: 1080 },    // 1080p
-                    { w: 2560, h: 1440 },    // 1440p
-                    { w: 3840, h: 2160 }     // 4K
-                ];
-
-                // Find the highest resolution that fits
-                let chosen = resolutions[0];
-                for (let i = 0; i < resolutions.length; i++) {
-                    if (screenW >= resolutions[i].w && screenH >= resolutions[i].h) {
-                        chosen = resolutions[i];
-                    }
-                }
-
-                // Update canvas resolution (internal pixels)
-                canvas.width = chosen.w;
-                canvas.height = chosen.h;
-
-                // Stretch canvas visually to fill screen
-                canvas.style.width = screenW + 'px';
-                canvas.style.height = screenH + 'px';
-
-                // Update container to fill screen
-                container.style.width = screenW + 'px';
-                container.style.height = screenH + 'px';
-
-                // Optional: apply crisp scaling for pixel art
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    ctx.imageSmoothingEnabled = false;
+            let chosen = resolutions[0];
+            for (let i = 0; i < resolutions.length; i++) {
+                if (screenW >= resolutions[i].w && screenH >= resolutions[i].h) {
+                    chosen = resolutions[i];
                 }
             }
 
-            // Listen for all resize events and update immediately
-            window.addEventListener('load', () => {
-                resizeCanvasToPreset();
-                GameMaker_Init();
-            });
-            window.addEventListener('resize', resizeCanvasToPreset);
-            window.addEventListener('orientationchange', resizeCanvasToPreset);
-        </script>
+            canvas.width = chosen.w;
+            canvas.height = chosen.h;
 
-        <!-- Builtin injector for injecting runner code -->
-    </body>
+            canvas.style.width = screenW + 'px';
+            canvas.style.height = screenH + 'px';
 
-    <!-- Custom PostBody code is injected here -->
-    
+            container.style.width = screenW + 'px';
+            container.style.height = screenH + 'px';
+
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.imageSmoothingEnabled = false;
+            }
+        }
+
+        window.addEventListener('load', () => {
+            resizeCanvasToPreset();
+            GameMaker_Init();
+        });
+
+        window.addEventListener('resize', resizeCanvasToPreset);
+        window.addEventListener('orientationchange', resizeCanvasToPreset);
+    </script>
+
+    <!-- ✅ Firebase Cloud Save/Load Integration -->
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
+    <script>
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyAbG8Nu-zY5VozE3Vcj1luMvT2NHKYqGO8",
+        authDomain: "undertale-html.firebaseapp.com",
+        projectId: "undertale-html",
+        storageBucket: "undertale-html.appspot.com",
+        messagingSenderId: "236288743208",
+        appId: "1:236288743208:web:265882bb885c14be18e21d",
+        measurementId: "G-Q025NH9PF2"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const saveKeys = [
+        "CreatedwithGameMaker.0.file0",
+        "CreatedwithGameMaker.0.file9",
+        "CreatedwithGameMaker.0.undertale.ini"
+    ];
+
+    let currentUser = "";
+
+    function askUsername() {
+        const name = prompt("Enter your username:");
+        if (name && name.trim()) {
+        currentUser = name.trim().toLowerCase();
+        alert("Logged in as: " + currentUser);
+        } else {
+        alert("Invalid username. Please try again.");
+        }
+    }
+
+    async function saveGameToFirebase() {
+        if (!currentUser) {
+        askUsername();
+        if (!currentUser) return;
+        }
+
+        const data = {};
+        saveKeys.forEach(key => {
+        const value = localStorage.getItem(key);
+        if (value !== null) {
+            data[key] = value;
+        }
+        });
+
+        try {
+        await db.collection("game_saves").doc(currentUser).set(data);
+        alert("Game saved to cloud!");
+        } catch (error) {
+        console.error("Save failed:", error);
+        alert("Failed to save game.");
+        }
+    }
+
+    async function loadGameFromFirebase() {
+        if (!currentUser) {
+        askUsername();
+        if (!currentUser) return;
+        }
+
+        try {
+        const doc = await db.collection("game_saves").doc(currentUser).get();
+        if (doc.exists) {
+            const data = doc.data();
+            for (const key in data) {
+            localStorage.setItem(key, data[key]);
+            }
+            alert("Game loaded from cloud!");
+            location.reload();
+        } else {
+            alert("No save found for this user.");
+        }
+        } catch (error) {
+        console.error("Load failed:", error);
+        alert("Failed to load game.");
+        }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+        const controls = document.createElement("div");
+        controls.style.position = "fixed";
+        controls.style.top = "10px";
+        controls.style.right = "10px";
+        controls.style.zIndex = "9999";
+        controls.innerHTML = `
+        <button onclick="askUsername()">👤 Set Username</button>
+        <button onclick="saveGameToFirebase()">💾 Save Game</button>
+        <button onclick="loadGameFromFirebase()">📂 Load Game</button>
+        `;
+        document.body.appendChild(controls);
+    });
+    </script>
+
+</body>
 </html>
