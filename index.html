@@ -1,122 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta charset="utf-8"/>
     <meta http-equiv="pragma" content="no-cache"/>
     <title>Created with GameMaker</title>
     <style>
         body, html {
             background: #000;
-            color: #000;
-            margin: 0px;
-            padding: 0px;
-            border: 0px;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
             height: 100%;
             width: 100%;
-            margin: 0;
-            overflow: hidden;
         }
-
         canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
             image-rendering: optimizeSpeed;
             -webkit-interpolation-mode: nearest-neighbor;
             -ms-touch-action: none;
             touch-action: none;
-            margin: 0px;
-            padding: 0px;
-            border: 0px;
-            display: block;
-            width: 100% !important;
-            height: 100% !important;
         }
-
-        :-webkit-full-screen #canvas {
+        :-webkit-full-screen #canvas, :-webkit-full-screen {
             width: 100%;
             height: 100%;
         }
-
-        :-webkit-full-screen {
-            width: 100%;
-            height: 100%;
-        }
-
-        div.gm4html5_div_class {
-            margin: 0px;
-            padding: 0px;
-            border: 0px;
-        }
-
-        div.gm4html5_login {
+        .gm4html5_div_class { margin: 0; padding: 0; border: 0; }
+        .gm4html5_login {
             padding: 20px;
             position: absolute;
-            border: solid 2px #000000;
+            border: 2px solid #000;
             background-color: #404040;
-            color: #00ff00;
+            color: #0f0;
             border-radius: 15px;
             box-shadow: #101010 20px 20px 40px;
         }
-
-        div.gm4html5_cancel_button {
-            float: right;
-        }
-
-        div.gm4html5_login_button {
-            float: left;
-        }
-
-        div.gm4html5_login_header {
-            text-align: center;
-        }
+        .gm4html5_cancel_button { float: right; }
+        .gm4html5_login_button { float: left; }
+        .gm4html5_login_header { text-align: center; }
     </style>
 </head>
 <body>
     <div class="gm4html5_div_class" id="gm4html5_div_id">
-        <canvas id="canvas">
-            <p>Your browser doesn't support HTML5 canvas.</p>
-        </canvas>
+        <canvas id="canvas"><p>Your browser doesn't support HTML5 canvas.</p></canvas>
     </div>
 
     <script type="text/javascript" src="html5game/NXTALE.js?cachebust=938571485"></script>
-
     <script>
         function resizeCanvasToPreset() {
             const canvas = document.getElementById('canvas');
             const container = document.getElementById('gm4html5_div_id');
-
             const screenW = window.innerWidth;
             const screenH = window.innerHeight;
-
             const resolutions = [
-                { w: 1280, h: 720 },
-                { w: 1920, h: 1080 },
-                { w: 2560, h: 1440 },
-                { w: 3840, h: 2160 }
+                { w: 1280, h: 720 }, { w: 1920, h: 1080 },
+                { w: 2560, h: 1440 }, { w: 3840, h: 2160 }
             ];
-
             let chosen = resolutions[0];
-            for (let i = 0; i < resolutions.length; i++) {
-                if (screenW >= resolutions[i].w && screenH >= resolutions[i].h) {
-                    chosen = resolutions[i];
-                }
+            for (let r of resolutions) {
+                if (screenW >= r.w && screenH >= r.h) chosen = r;
             }
-
             canvas.width = chosen.w;
             canvas.height = chosen.h;
-
             canvas.style.width = screenW + 'px';
             canvas.style.height = screenH + 'px';
-
             container.style.width = screenW + 'px';
             container.style.height = screenH + 'px';
-
             const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.imageSmoothingEnabled = false;
-            }
+            if (ctx) ctx.imageSmoothingEnabled = false;
         }
 
         window.addEventListener('load', () => {
@@ -128,21 +84,19 @@
         window.addEventListener('orientationchange', resizeCanvasToPreset);
     </script>
 
-    <!-- ✅ Firebase Cloud Save/Load Integration -->
+    <!-- ✅ Firebase Setup -->
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
     <script>
-    // Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyDqDU6p8BH1hTqox7f5Sj1ySTWifIP2818",
         authDomain: "wigdos-9aa6a.firebaseapp.com",
         projectId: "wigdos-9aa6a",
-        storageBucket: "wigdos-9aa6a.firebasestorage.app",
+        storageBucket: "wigdos-9aa6a.appspot.com",
         messagingSenderId: "124867645389",
         appId: "1:124867645389:web:4530e19e575669f3cabe84",
         measurementId: "G-1KTKSSCJ33"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
@@ -153,61 +107,67 @@
     ];
 
     let currentUser = "";
+    let currentPassword = "";
 
-    function askUsername() {
-        const name = prompt("Enter your username:");
-        if (name && name.trim()) {
-        currentUser = name.trim().toLowerCase();
-        alert("Logged in as: " + currentUser);
-        } else {
-        alert("Invalid username. Please try again.");
+    async function askCredentials() {
+        const username = prompt("Enter your username:")?.trim().toLowerCase();
+        if (!username) return alert("Username required.");
+
+        const password = prompt("Enter your password:");
+        if (!password) return alert("Password required.");
+
+        const userDoc = await db.collection("game_saves").doc(username).get();
+        if (userDoc.exists) {
+            const data = userDoc.data();
+            if (data.password !== password) {
+                alert("Incorrect password.");
+                return;
+            }
         }
+
+        currentUser = username;
+        currentPassword = password;
+        alert("Logged in as: " + currentUser);
     }
 
     async function saveGameToFirebase() {
-        if (!currentUser) {
-        askUsername();
+        if (!currentUser) await askCredentials();
         if (!currentUser) return;
-        }
 
-        const data = {};
+        const data = { password: currentPassword };
         saveKeys.forEach(key => {
-        const value = localStorage.getItem(key);
-        if (value !== null) {
-            data[key] = value;
-        }
+            const val = localStorage.getItem(key);
+            if (val !== null) data[key] = val;
         });
 
         try {
-        await db.collection("game_saves").doc(currentUser).set(data);
-        alert("Game saved to cloud!");
-        } catch (error) {
-        console.error("Save failed:", error);
-        alert("Failed to save game.");
+            await db.collection("game_saves").doc(currentUser).set(data);
+            alert("✅ Game saved to cloud!");
+        } catch (err) {
+            console.error("Save error:", err);
+            alert("❌ Failed to save.");
         }
     }
 
     async function loadGameFromFirebase() {
-        if (!currentUser) {
-        askUsername();
+        if (!currentUser) await askCredentials();
         if (!currentUser) return;
-        }
 
         try {
-        const doc = await db.collection("game_saves").doc(currentUser).get();
-        if (doc.exists) {
+            const doc = await db.collection("game_saves").doc(currentUser).get();
+            if (!doc.exists) return alert("No save found.");
+
             const data = doc.data();
-            for (const key in data) {
-            localStorage.setItem(key, data[key]);
+            if (data.password !== currentPassword) return alert("Incorrect password.");
+
+            for (const key of saveKeys) {
+                if (data[key]) localStorage.setItem(key, data[key]);
             }
-            alert("Game loaded from cloud!");
+            alert("✅ Game loaded!");
             location.reload();
-        } else {
-            alert("No save found for this user.");
-        }
-        } catch (error) {
-        console.error("Load failed:", error);
-        alert("Failed to load game.");
+        } catch (err) {
+            console.error("Load error:", err);
+            alert("❌ Failed to load.");
         }
     }
 
@@ -217,14 +177,16 @@
         controls.style.top = "10px";
         controls.style.right = "10px";
         controls.style.zIndex = "9999";
+        controls.style.background = "#222";
+        controls.style.padding = "10px";
+        controls.style.borderRadius = "10px";
         controls.innerHTML = `
-        <button onclick="askUsername()">👤 Set Username</button>
-        <button onclick="saveGameToFirebase()">💾 Save Game</button>
-        <button onclick="loadGameFromFirebase()">📂 Load Game</button>
+            <button onclick="askCredentials()">🔐 Login</button>
+            <button onclick="saveGameToFirebase()">💾 Save</button>
+            <button onclick="loadGameFromFirebase()">📂 Load</button>
         `;
         document.body.appendChild(controls);
     });
     </script>
-
 </body>
 </html>
