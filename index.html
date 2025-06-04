@@ -175,15 +175,27 @@ window.addEventListener("message", async (event) => {
     if (event.data?.type === "saveGame") {
         console.log("💾 Save requested by parent");
 
+        // ✅ Save first (only for non-guests)
         if (typeof currentUser !== "undefined" && currentUser !== "guest") {
             await saveGameToFirebase();
         }
 
+        // ✅ Then clear the localStorage cache to prevent save bleed
+        const keysToClear = [
+            "CreatedwithGameMaker.0.file0",
+            "CreatedwithGameMaker.0.file9",
+            "CreatedwithGameMaker.0.undertale.ini"
+        ];
+        keysToClear.forEach(key => localStorage.removeItem(key));
+        console.log("🧹 Cleared localStorage cache");
+
+        // ✅ Reply to parent that it's done
         if (event.ports?.[0]) {
             event.ports[0].postMessage("save-complete");
         }
     }
 });
+
 </script>
 
 </body>
