@@ -168,7 +168,7 @@ async function loadGameFromFirebase() {
         });
 
         alert("✅ Game loaded for: " + currentUser);
-        loadGameFromFirebase();
+        location.reload(); // Reload to apply changes
     } catch (err) {
         console.error("Load error:", err);
         alert("❌ Failed to load.");
