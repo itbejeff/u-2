@@ -99,6 +99,21 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+let currentUser = "guest"; // default fallback
+
+// Wait for Wigdos to send us the username
+window.addEventListener("message", (event) => {
+    // Optional: restrict by origin
+    // if (event.origin !== "https://your-wigdos-domain.com") return;
+
+    if (event.data?.type === "setUser") {
+        currentUser = event.data.username || "guest";
+        console.log("✅ Username received from Wigdos:", currentUser);
+
+        // Now that we have a user, try to auto-load their save
+        loadGameFromFirebase();
+    }
+});
 
 const saveKeys = [
     "CreatedwithGameMaker.0.file0",
@@ -106,7 +121,7 @@ const saveKeys = [
     "CreatedwithGameMaker.0.undertale.ini"
 ];
 
-const currentUser = sessionStorage.getItem("username");
+// const currentUser = sessionStorage.getItem("username");
 
 if (!currentUser) {
     console.warn("⚠️ No Wigdos user detected. Load this app from Wigdos.");
