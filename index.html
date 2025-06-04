@@ -85,108 +85,95 @@
     </script>
 
     <!-- ✅ Firebase Setup -->
-    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
-    <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyDqDU6p8BH1hTqox7f5Sj1ySTWifIP2818",
-        authDomain: "wigdos-9aa6a.firebaseapp.com",
-        projectId: "wigdos-9aa6a",
-        storageBucket: "wigdos-9aa6a.appspot.com",
-        messagingSenderId: "124867645389",
-        appId: "1:124867645389:web:4530e19e575669f3cabe84",
-        measurementId: "G-1KTKSSCJ33"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDqDU6p8BH1hTqox7f5Sj1ySTWifIP2818",
+    authDomain: "wigdos-9aa6a.firebaseapp.com",
+    projectId: "wigdos-9aa6a",
+    storageBucket: "wigdos-9aa6a.appspot.com",
+    messagingSenderId: "124867645389",
+    appId: "1:124867645389:web:4530e19e575669f3cabe84",
+    measurementId: "G-1KTKSSCJ33"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-    const saveKeys = [
-        "CreatedwithGameMaker.0.file0",
-        "CreatedwithGameMaker.0.file9",
-        "CreatedwithGameMaker.0.undertale.ini"
-    ];
+const saveKeys = [
+    "CreatedwithGameMaker.0.file0",
+    "CreatedwithGameMaker.0.file9",
+    "CreatedwithGameMaker.0.undertale.ini"
+];
 
-    let currentUser = "";
-    let currentPassword = "";
+const currentUser = sessionStorage.getItem("username");
 
-    async function askCredentials() {
-        const username = prompt("Enter your username:")?.trim().toLowerCase();
-        if (!username) return alert("Username required.");
+if (!currentUser) {
+    console.warn("⚠️ No Wigdos user detected. Load this app from Wigdos.");
+}
 
-        const password = prompt("Enter your password:");
-        if (!password) return alert("Password required.");
+async function saveGameToFirebase() {
+    if (!currentUser) return alert("Not logged in through Wigdos.");
 
-        const userDoc = await db.collection("game_saves").doc(username).get();
-        if (userDoc.exists) {
-            const data = userDoc.data();
-            if (data.password !== password) {
-                alert("Incorrect password.");
-                return;
-            }
+    const data = {};
+    saveKeys.forEach(key => {
+        const val = localStorage.getItem(key);
+        if (val !== null) data[key] = val;
+    });
+
+    try {
+        await db.collection("game_saves").doc(currentUser).set(data);
+        alert("✅ Game saved to cloud for user: " + currentUser);
+    } catch (err) {
+        console.error("Save error:", err);
+        alert("❌ Failed to save.");
+    }
+}
+
+async function loadGameFromFirebase() {
+    if (!currentUser) return alert("Not logged in through Wigdos.");
+
+    try {
+        const doc = await db.collection("game_saves").doc(currentUser).get();
+        if (!doc.exists) {
+            alert("⚠️ No save found for user: " + currentUser);
+            return;
         }
 
-        currentUser = username;
-        currentPassword = password;
-        alert("Logged in as: " + currentUser);
-    }
-
-    async function saveGameToFirebase() {
-        if (!currentUser) await askCredentials();
-        if (!currentUser) return;
-
-        const data = { password: currentPassword };
+        const data = doc.data();
         saveKeys.forEach(key => {
-            const val = localStorage.getItem(key);
-            if (val !== null) data[key] = val;
+            if (data[key]) localStorage.setItem(key, data[key]);
         });
 
-        try {
-            await db.collection("game_saves").doc(currentUser).set(data);
-            alert("✅ Game saved to cloud!");
-        } catch (err) {
-            console.error("Save error:", err);
-            alert("❌ Failed to save.");
-        }
+        alert("✅ Game loaded for: " + currentUser);
+        location.reload();
+    } catch (err) {
+        console.error("Load error:", err);
+        alert("❌ Failed to load.");
     }
+}
 
-    async function loadGameFromFirebase() {
-        if (!currentUser) await askCredentials();
-        if (!currentUser) return;
+// Add Save/Load buttons and auto-load on startup
+window.addEventListener("DOMContentLoaded", () => {
+    if (currentUser) loadGameFromFirebase(); // Auto-load save
 
-        try {
-            const doc = await db.collection("game_saves").doc(currentUser).get();
-            if (!doc.exists) return alert("No save found.");
+    const controls = document.createElement("div");
+    controls.style.position = "fixed";
+    controls.style.top = "10px";
+    controls.style.right = "10px";
+    controls.style.zIndex = "9999";
+    controls.style.background = "#222";
+    controls.style.padding = "10px";
+    controls.style.borderRadius = "10px";
+    controls.style.color = "#fff";
+    controls.innerHTML = `
+        <div><strong>Signed in as:</strong> ${currentUser || "Guest"}</div><br>
+        <button onclick="saveGameToFirebase()">💾 Save</button>
+        <button onclick="loadGameFromFirebase()">📂 Load</button>
+    `;
+    document.body.appendChild(controls);
+});
+</script>
 
-            const data = doc.data();
-            if (data.password !== currentPassword) return alert("Incorrect password.");
-
-            for (const key of saveKeys) {
-                if (data[key]) localStorage.setItem(key, data[key]);
-            }
-            alert("✅ Game loaded!");
-            location.reload();
-        } catch (err) {
-            console.error("Load error:", err);
-            alert("❌ Failed to load.");
-        }
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-        const controls = document.createElement("div");
-        controls.style.position = "fixed";
-        controls.style.top = "10px";
-        controls.style.right = "10px";
-        controls.style.zIndex = "9999";
-        controls.style.background = "#222";
-        controls.style.padding = "10px";
-        controls.style.borderRadius = "10px";
-        controls.innerHTML = `
-            <button onclick="askCredentials()">🔐 Login</button>
-            <button onclick="saveGameToFirebase()">💾 Save</button>
-            <button onclick="loadGameFromFirebase()">📂 Load</button>
-        `;
-        document.body.appendChild(controls);
-    });
-    </script>
 </body>
 </html>
