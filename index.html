@@ -85,6 +85,7 @@
     </script>
 
     <!-- ✅ Firebase Setup -->
+<!-- ✅ Firebase Setup -->
 <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
 <script>
@@ -101,34 +102,28 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 let currentUser = "guest"; // default fallback
 
-// Wait for Wigdos to send us the username
-window.addEventListener("message", (event) => {
-    // Optional: restrict by origin
-    // if (event.origin !== "https://your-wigdos-domain.com") return;
-
-    if (event.data?.type === "setUser") {
-        currentUser = event.data.username || "guest";
-        console.log("✅ Username received from Wigdos:", currentUser);
-
-        // Now that we have a user, try to auto-load their save
-        loadGameFromFirebase();
-        if (!sessionStorage.getItem("undertale_loaded")) {
-            sessionStorage.setItem("undertale_loaded", "true");
-            location.reload(); // ✅ only once
-        } else {
-            sessionStorage.removeItem("undertale_loaded"); // clean up
-        }
-
-    }
-});
-
 const saveKeys = [
     "CreatedwithGameMaker.0.file0",
     "CreatedwithGameMaker.0.file9",
     "CreatedwithGameMaker.0.undertale.ini"
 ];
 
-// const currentUser = sessionStorage.getItem("username");
+// 👂 Listen for Wigdos message to get username
+window.addEventListener("message", async (event) => {
+    if (event.data?.type === "setUser") {
+        currentUser = event.data.username || "guest";
+        console.log("✅ Username received from Wigdos:", currentUser);
+
+        // Only load ONCE to prevent loops
+        if (!sessionStorage.getItem("undertale_loaded")) {
+            sessionStorage.setItem("undertale_loaded", "true");
+            await loadGameFromFirebase();
+            // ✅ No reload here
+        } else {
+            console.log("🔁 Skipping second load");
+        }
+    }
+});
 
 if (!currentUser) {
     console.warn("⚠️ No Wigdos user detected. Load this app from Wigdos.");
@@ -168,12 +163,16 @@ async function loadGameFromFirebase() {
         });
 
         alert("✅ Game loaded for: " + currentUser);
-        location.reload(); // Reload to apply changes
+        // ✅ No reload here
     } catch (err) {
         console.error("Load error:", err);
         alert("❌ Failed to load.");
     }
 }
+    async function manualLoadAndReload() {
+        await loadGameFromFirebase();
+        location.reload(); // ✅ This will now only happen when user clicks
+    }
 
 // Add Save/Load buttons and auto-load on startup
 window.addEventListener("DOMContentLoaded", () => {
@@ -185,10 +184,11 @@ window.addEventListener("DOMContentLoaded", () => {
     controls.style.zIndex = "9999";
     controls.style.background = "#222";
     controls.style.padding = "5px";
-    controls.innerHTML = `
-        <button onclick="saveGameToFirebase()">💾 Save</button>
-        <button onclick="loadGameFromFirebase()">📂 Load</button>
-    `;
+    controls.innerHTML = 
+        `<div>
+            <button onclick="saveGameToFirebase()">💾 Save</button>
+            <button onclick="manualLoadAndReload()">📂 Load</button>
+        </div>`;
     document.body.appendChild(controls);
 });
 </script>
