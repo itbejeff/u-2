@@ -170,8 +170,7 @@ async function loadGameFromFirebase() {
 
 // Add Save/Load buttons and auto-load on startup
 window.addEventListener("DOMContentLoaded", () => {
-    if (currentUser) loadGameFromFirebase(); // Auto-load save
-
+   
     const controls = document.createElement("div");
     controls.style.position = "fixed";
     controls.style.top = "10px";
