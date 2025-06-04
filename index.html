@@ -178,8 +178,10 @@ window.addEventListener("message", async (event) => {
         if (typeof currentUser !== "undefined" && currentUser !== "guest") {
             await saveGameToFirebase();
         }
+            if (event.ports?.[0]) {
+                event.ports[0].postMessage("save-complete");
+        }
 
-        // ✅ Clear local save cache
         const keysToClear = [
             "CreatedwithGameMaker.0.file0",
             "CreatedwithGameMaker.0.file9",
@@ -191,10 +193,6 @@ window.addEventListener("message", async (event) => {
         // ✅ Allow save to reload next time
         sessionStorage.removeItem("undertale_loaded");
 
-        // ✅ Notify parent
-        if (event.ports?.[0]) {
-            event.ports[0].postMessage("save-complete");
-        }
     }
 });
 
