@@ -100,7 +100,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-let currentUser = "guest"; // default fallback
+let currentUser = "guest";
 
 const saveKeys = [
     "CreatedwithGameMaker.0.file0",
@@ -108,17 +108,15 @@ const saveKeys = [
     "CreatedwithGameMaker.0.undertale.ini"
 ];
 
-// 👂 Listen for Wigdos message to get username
+// Receive username from Wigdos
 window.addEventListener("message", async (event) => {
     if (event.data?.type === "setUser") {
         currentUser = event.data.username || "guest";
         console.log("✅ Username received from Wigdos:", currentUser);
 
-        // Only load ONCE to prevent loops
         if (!sessionStorage.getItem("undertale_loaded")) {
             sessionStorage.setItem("undertale_loaded", "true");
             await loadGameFromFirebase();
-            // ✅ No reload here
         } else {
             console.log("🔁 Skipping second load");
         }
@@ -131,10 +129,9 @@ if (!currentUser) {
 
 async function saveGameToFirebase() {
     if (!currentUser || currentUser === "guest") {
-    console.warn("⛔ Guest users can't save.");
-    return; // ✅ Skip saving for guests
+        console.warn("⛔ Guest users can't save.");
+        return;
     }
-
 
     const data = {};
     saveKeys.forEach(key => {
@@ -167,12 +164,27 @@ async function loadGameFromFirebase() {
         });
 
         alert("✅ Game loaded for: " + currentUser);
-        // ✅ No reload here
     } catch (err) {
         console.error("Load error:", err);
         alert("❌ Failed to load.");
     }
-//}
+}
+
+// ✅ Save on close (Wigdos triggers this)
+window.addEventListener("message", async (event) => {
+    if (event.data?.type === "saveGame") {
+        console.log("💾 Save requested by parent");
+
+        if (typeof currentUser !== "undefined" && currentUser !== "guest") {
+            await saveGameToFirebase();
+        }
+
+        if (event.ports?.[0]) {
+            event.ports[0].postMessage("save-complete");
+        }
+    }
+});
+
 //    async function manualLoadAndReload() {
 //        await loadGameFromFirebase();
 //        location.reload(); // ✅ This will now only happen when user clicks
@@ -195,15 +207,10 @@ async function loadGameFromFirebase() {
 //         </div>`;
 //      document.body.appendChild(controls);
 // });
-    window.addEventListener("message", async (event) => {
-        if (event.data?.type === "saveGame") {
-            console.log("💾 Save command received from Wigdos");
-            await saveGameToFirebase();
-        }
-    });
-}
 
 </script>
 
 </body>
+
 </html>
+
