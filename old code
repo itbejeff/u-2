@@ -1,0 +1,22 @@
+//    async function manualLoadAndReload() {
+//        await loadGameFromFirebase();
+//        location.reload(); // ✅ This will now only happen when user clicks
+//    }
+
+// Add Save/Load buttons and auto-load on startup
+//    window.addEventListener("DOMContentLoaded", () => {
+// Not used anymore (for testing)
+//    const controls = document.createElement("div");
+//     controls.style.position = "fixed";
+//     controls.style.top = "5px";
+//     controls.style.right = "5px";
+//     controls.style.zIndex = "9999";
+//     controls.style.background = "#222";
+//     controls.style.padding = "5px";
+//     controls.innerHTML = 
+//         `<div>
+//             <button onclick="saveGameToFirebase()">💾 Save</button>
+//             <button onclick="manualLoadAndReload()">📂 Load</button>
+//         </div>`;
+//      document.body.appendChild(controls);
+// });
