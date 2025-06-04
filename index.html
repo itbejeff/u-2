@@ -112,6 +112,13 @@ window.addEventListener("message", (event) => {
 
         // Now that we have a user, try to auto-load their save
         loadGameFromFirebase();
+        if (!sessionStorage.getItem("undertale_loaded")) {
+            sessionStorage.setItem("undertale_loaded", "true");
+            location.reload(); // ✅ only once
+        } else {
+            sessionStorage.removeItem("undertale_loaded"); // clean up
+        }
+
     }
 });
 
@@ -161,6 +168,7 @@ async function loadGameFromFirebase() {
         });
 
         alert("✅ Game loaded for: " + currentUser);
+        loadGameFromFirebase();
     } catch (err) {
         console.error("Load error:", err);
         alert("❌ Failed to load.");
