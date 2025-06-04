@@ -130,7 +130,11 @@ if (!currentUser) {
 }
 
 async function saveGameToFirebase() {
-    if (!currentUser) return alert("Not logged in through Wigdos.");
+    if (!currentUser || currentUser === "guest") {
+    console.warn("⛔ Guest users can't save.");
+    return; // ✅ Skip saving for guests
+    }
+
 
     const data = {};
     saveKeys.forEach(key => {
