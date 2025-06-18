@@ -30,21 +30,55 @@
             width: 100%;
             height: 100%;
         }
+        .gm4html5_div_class { margin: 0; padding: 0; border: 0; }
+        .gm4html5_login {
+            padding: 20px;
+            position: absolute;
+            border: 2px solid #000;
+            background-color: #404040;
+            color: #0f0;
+            border-radius: 15px;
+            box-shadow: #101010 20px 20px 40px;
+        }
+        .gm4html5_cancel_button { float: right; }
+        .gm4html5_login_button { float: left; }
+        .gm4html5_login_header { text-align: center; }
     </style>
 </head>
 <body>
-    <canvas id="canvas" tabindex="1"></canvas>
+    
+    <div class="gm4html5_div_class" id="gm4html5_div_id">
+        <canvas id="canvas"><p>Your browser doesn't support HTML5 canvas.</p></canvas>
+    </div>
 
+    <script type="text/javascript" src="html5game/NXTALE.js?cachebust=938571485"></script>
     <script>
-    function resizeCanvasToPreset() {
-        let canvas = document.getElementById('canvas');
-        if (!canvas) return;
-        canvas.width = 960;
-        canvas.height = 540;
-    }
-    window.addEventListener('load', resizeCanvasToPreset);
-    window.addEventListener('resize', resizeCanvasToPreset);
-    window.addEventListener('orientationchange', resizeCanvasToPreset);
+        function resizeCanvasToPreset() {
+            const canvas = document.getElementById('canvas');
+            const container = document.getElementById('gm4html5_div_id');
+            const screenW = window.innerWidth;
+            const screenH = window.innerHeight;
+            const resolutions = [
+                { w: 1280, h: 720 }, { w: 1920, h: 1080 },
+                { w: 2560, h: 1440 }, { w: 3840, h: 2160 }
+            ];
+            let chosen = resolutions[0];
+            for (let r of resolutions) {
+                if (screenW >= r.w && screenH >= r.h) chosen = r;
+            }
+            canvas.width = chosen.w;
+            canvas.height = chosen.h;
+            canvas.style.width = screenW + 'px';
+            canvas.style.height = screenH + 'px';
+            container.style.width = screenW + 'px';
+            container.style.height = screenH + 'px';
+            const ctx = canvas.getContext('2d');
+            if (ctx) ctx.imageSmoothingEnabled = false;
+        }
+
+        window.addEventListener('load', resizeCanvasToPreset);
+        window.addEventListener('resize', resizeCanvasToPreset);
+        window.addEventListener('orientationchange', resizeCanvasToPreset);
     </script>
 
     <!-- ✅ Firebase Setup -->
@@ -52,49 +86,16 @@
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
 
     <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyDqDU6p8BH1hTqox7f5Sj1ySTWifIP2818",
-        authDomain: "wigdos-9aa6a.firebaseapp.com",
-        projectId: "wigdos-9aa6a",
-        storageBucket: "wigdos-9aa6a.appspot.com",
-        messagingSenderId: "124867645389",
-        appId: "1:124867645389:web:4530e19e575669f3cabe84",
-        measurementId: "G-1KTKSSCJ33"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    // --- USER DETECTION PATCH START ---
+    // Place this at the VERY TOP of your main script block!
     let currentUser = "guest";
-
-    const saveKeys = [
-        "CreatedwithGameMaker.0.file0",
-        "CreatedwithGameMaker.0.file9",
-        "CreatedwithGameMaker.0.undertale.ini"
-    ];
-
-    // Track if game has started
     let gameStarted = false;
+    let gotUser = false;
 
-    async function startGame() {
-        if (gameStarted) return;
-        gameStarted = true;
-
-        if (!sessionStorage.getItem("undertale_loaded")) {
-            sessionStorage.setItem("undertale_loaded", "true");
-            await loadGameFromFirebase();
-        } else {
-            console.log("🔁 Skipping second load");
-        }
-
-        console.log("🎮 Starting GameMaker...");
-        if (typeof GameMaker_Init === "function") {
-            GameMaker_Init();
-        }
-    }
-
-    // Receive username from Wigdos
     window.addEventListener("message", async (event) => {
         console.log("[UNDERTALE] Received postMessage:", event.data);
         if (event.data?.type === "setUser") {
+            gotUser = true;
             currentUser = event.data.username || "guest";
             console.log("✅ Username received from Wigdos:", currentUser);
             await startGame();
@@ -106,6 +107,7 @@
             if (currentUser !== "guest") {
                 await saveGameToFirebase();
             }
+
             if (event.ports?.[0]) {
                 event.ports[0].postMessage("save-complete");
             }
@@ -123,13 +125,49 @@
         }
     });
 
-    // Fallback if no Wigdos user after 10 seconds
+    // Fallback: wait longer for postMessage, but start as guest if no message arrives
     setTimeout(() => {
-        if (!gameStarted) {
+        if (!gotUser && !gameStarted) {
             console.warn("⏱️ No Wigdos user detected, continuing as guest...");
             startGame();
         }
     }, 10000);
+    // --- USER DETECTION PATCH END ---
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDqDU6p8BH1hTqox7f5Sj1ySTWifIP2818",
+        authDomain: "wigdos-9aa6a.firebaseapp.com",
+        projectId: "wigdos-9aa6a",
+        storageBucket: "wigdos-9aa6a.appspot.com",
+        messagingSenderId: "124867645389",
+        appId: "1:124867645389:web:4530e19e575669f3cabe84",
+        measurementId: "G-1KTKSSCJ33"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const saveKeys = [
+        "CreatedwithGameMaker.0.file0",
+        "CreatedwithGameMaker.0.file9",
+        "CreatedwithGameMaker.0.undertale.ini"
+    ];
+
+    async function startGame() {
+        if (gameStarted) return;
+        gameStarted = true;
+
+        if (!sessionStorage.getItem("undertale_loaded")) {
+            sessionStorage.setItem("undertale_loaded", "true");
+            await loadGameFromFirebase();
+        } else {
+            console.log("🔁 Skipping second load");
+        }
+
+        console.log("🎮 Starting GameMaker...");
+        if (typeof GameMaker_Init === "function") {
+            GameMaker_Init();
+        }
+    }
 
     async function saveGameToFirebase() {
         if (!currentUser || currentUser === "guest") {
@@ -184,7 +222,5 @@
     }
     </script>
 
-    <!-- Your GameMaker scripts go here -->
-    <script src="html5game/html5game.js"></script>
 </body>
 </html>
