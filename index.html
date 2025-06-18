@@ -46,6 +46,7 @@
     </style>
 </head>
 <body>
+    
     <div class="gm4html5_div_class" id="gm4html5_div_id">
         <canvas id="canvas"><p>Your browser doesn't support HTML5 canvas.</p></canvas>
     </div>
@@ -75,44 +76,41 @@
             if (ctx) ctx.imageSmoothingEnabled = false;
         }
 
-        window.addEventListener('load', () => {
-            resizeCanvasToPreset();
-            GameMaker_Init();
-        });
-
+        window.addEventListener('load', resizeCanvasToPreset);
         window.addEventListener('resize', resizeCanvasToPreset);
         window.addEventListener('orientationchange', resizeCanvasToPreset);
     </script>
 
     <!-- ✅ Firebase Setup -->
-<!-- ✅ Firebase Setup -->
-<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDqDU6p8BH1hTqox7f5Sj1ySTWifIP2818",
-    authDomain: "wigdos-9aa6a.firebaseapp.com",
-    projectId: "wigdos-9aa6a",
-    storageBucket: "wigdos-9aa6a.appspot.com",
-    messagingSenderId: "124867645389",
-    appId: "1:124867645389:web:4530e19e575669f3cabe84",
-    measurementId: "G-1KTKSSCJ33"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-let currentUser = "guest";
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
 
-const saveKeys = [
-    "CreatedwithGameMaker.0.file0",
-    "CreatedwithGameMaker.0.file9",
-    "CreatedwithGameMaker.0.undertale.ini"
-];
+    <script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDqDU6p8BH1hTqox7f5Sj1ySTWifIP2818",
+        authDomain: "wigdos-9aa6a.firebaseapp.com",
+        projectId: "wigdos-9aa6a",
+        storageBucket: "wigdos-9aa6a.appspot.com",
+        messagingSenderId: "124867645389",
+        appId: "1:124867645389:web:4530e19e575669f3cabe84",
+        measurementId: "G-1KTKSSCJ33"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    let currentUser = "guest";
 
-// Receive username from Wigdos
-window.addEventListener("message", async (event) => {
-    if (event.data?.type === "setUser") {
-        currentUser = event.data.username || "guest";
-        console.log("✅ Username received from Wigdos:", currentUser);
+    const saveKeys = [
+        "CreatedwithGameMaker.0.file0",
+        "CreatedwithGameMaker.0.file9",
+        "CreatedwithGameMaker.0.undertale.ini"
+    ];
+
+    // Track if game has started
+    let gameStarted = false;
+
+    async function startGame() {
+        if (gameStarted) return;
+        gameStarted = true;
 
         if (!sessionStorage.getItem("undertale_loaded")) {
             sessionStorage.setItem("undertale_loaded", "true");
@@ -120,86 +118,97 @@ window.addEventListener("message", async (event) => {
         } else {
             console.log("🔁 Skipping second load");
         }
-    }
-});
 
-if (!currentUser) {
-    console.warn("⚠️ No Wigdos user detected. Load this app from Wigdos.");
-}
-
-async function saveGameToFirebase() {
-    if (!currentUser || currentUser === "guest") {
-        console.warn("⛔ Guest users can't save.");
-        return;
+        console.log("🎮 Starting GameMaker...");
+        GameMaker_Init();
     }
 
-    const data = {};
-    saveKeys.forEach(key => {
-        const val = localStorage.getItem(key);
-        if (val !== null) data[key] = val;
+    // Receive username from Wigdos
+    window.addEventListener("message", async (event) => {
+        if (event.data?.type === "setUser") {
+            currentUser = event.data.username || "guest";
+            console.log("✅ Username received from Wigdos:", currentUser);
+            await startGame();
+        }
+
+        // Save request from Wigdos
+        if (event.data?.type === "saveGame") {
+            console.log("💾 Save requested by parent");
+            if (currentUser !== "guest") {
+                await saveGameToFirebase();
+            }
+
+            if (event.ports?.[0]) {
+                event.ports[0].postMessage("save-complete");
+            }
+
+            // Clear local save cache
+            const keysToClear = [
+                "CreatedwithGameMaker.0.file0",
+                "CreatedwithGameMaker.0.file9",
+                "CreatedwithGameMaker.0.undertale.ini"
+            ];
+            keysToClear.forEach(key => localStorage.removeItem(key));
+            console.log("🧹 Cleared localStorage cache");
+
+            sessionStorage.removeItem("undertale_loaded");
+        }
     });
 
-    try {
-        await db.collection("game_saves").doc(currentUser).set(data);
-        alert("✅ Game saved to cloud for user: " + currentUser);
-    } catch (err) {
-        console.error("Save error:", err);
-        alert("❌ Failed to save.");
-    }
-}
+    // Fallback if no Wigdos user after 3 seconds
+    setTimeout(() => {
+        if (!gameStarted) {
+            console.warn("⏱️ No Wigdos user detected, continuing as guest...");
+            startGame();
+        }
+    }, 3000);
 
-async function loadGameFromFirebase() {
-    if (!currentUser) return alert("Not logged in through Wigdos.");
-
-    try {
-        const doc = await db.collection("game_saves").doc(currentUser).get();
-        if (!doc.exists) {
-            alert("⚠️ No save found for user: " + currentUser);
+    async function saveGameToFirebase() {
+        if (!currentUser || currentUser === "guest") {
+            console.warn("⛔ Guest users can't save.");
             return;
         }
 
-        const data = doc.data();
+        const data = {};
         saveKeys.forEach(key => {
-            if (data[key]) localStorage.setItem(key, data[key]);
+            const val = localStorage.getItem(key);
+            if (val !== null) data[key] = val;
         });
 
-        alert("✅ Game loaded for: " + currentUser);
-    } catch (err) {
-        console.error("Load error:", err);
-        alert("❌ Failed to load.");
-    }
-}
-
-// ✅ Save on close (Wigdos triggers this)
-window.addEventListener("message", async (event) => {
-    if (event.data?.type === "saveGame") {
-        console.log("💾 Save requested by parent");
-
-        if (typeof currentUser !== "undefined" && currentUser !== "guest") {
-            await saveGameToFirebase();
+        try {
+            await db.collection("game_saves").doc(currentUser).set(data);
+            alert("✅ Game saved to cloud for user: " + currentUser);
+        } catch (err) {
+            console.error("Save error:", err);
+            alert("❌ Failed to save.");
         }
-            if (event.ports?.[0]) {
-                event.ports[0].postMessage("save-complete");
+    }
+
+    async function loadGameFromFirebase() {
+        if (!currentUser || currentUser === "guest") {
+            console.warn("⛔ Guest users can't load saves from cloud.");
+            return;
         }
 
-        const keysToClear = [
-            "CreatedwithGameMaker.0.file0",
-            "CreatedwithGameMaker.0.file9",
-            "CreatedwithGameMaker.0.undertale.ini"
-        ];
-        keysToClear.forEach(key => localStorage.removeItem(key));
-        console.log("🧹 Cleared localStorage cache");
+        try {
+            const doc = await db.collection("game_saves").doc(currentUser).get();
+            if (!doc.exists) {
+                alert("⚠️ No save found for user: " + currentUser);
+                return;
+            }
 
-        // ✅ Allow save to reload next time
-        sessionStorage.removeItem("undertale_loaded");
+            const data = doc.data();
+            saveKeys.forEach(key => {
+                if (data[key]) localStorage.setItem(key, data[key]);
+            });
 
+            alert("✅ Game loaded for: " + currentUser);
+        } catch (err) {
+            console.error("Load error:", err);
+            alert("❌ Failed to load.");
+        }
     }
-});
-
-
-</script>
+    </script>
 
 </body>
-
 </html>
-
