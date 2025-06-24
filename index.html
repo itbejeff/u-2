@@ -36,21 +36,10 @@
         <canvas id="canvas"><p>Your browser doesn't support HTML5 canvas.</p></canvas>
     </div>
 
-    <div id="myCustomLoader"
-     style="position:fixed;inset:0;z-index:99999;
-            background:url('asgore.gif') center center no-repeat #000;
-            background-size:contain;">
+    <div id="myCustomLoader" style="position:fixed;inset:0;z-index:99999;">
+    <video src="asgore.mp4" autoplay loop muted style="width:100vw;height:100vh;object-fit:cover;" id="loaderVideo"></video>
     </div>
-    <script>
-    function hideCustomLoader() {
-    const loader = document.getElementById('myCustomLoader');
-    if (loader) loader.style.opacity = '0';
-    setTimeout(() => { if (loader) loader.remove(); }, 600);
-    }
-    // Call this when your game is ready (e.g., after GameMaker_Init or after a timeout)
-    // Example:
-    setTimeout(hideCustomLoader, 3500);
-    </script>
+    <script src="customLoader.js"></script>
 
     <script type="text/javascript" src="html5game/NXTALE.js?cachebust=938571485"></script>
     <script src="rezizeCanvasToPreset.js"></script>
