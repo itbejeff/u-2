@@ -26,23 +26,6 @@
             -ms-touch-action: none;
             touch-action: none;
         }
-        :-webkit-full-screen #canvas, :-webkit-full-screen {
-            width: 100%;
-            height: 100%;
-        }
-        .gm4html5_div_class { margin: 0; padding: 0; border: 0; }
-        .gm4html5_login {
-            padding: 20px;
-            position: absolute;
-            border: 2px solid #000;
-            background-color: #404040;
-            color: #0f0;
-            border-radius: 15px;
-            box-shadow: #101010 20px 20px 40px;
-        }
-        .gm4html5_cancel_button { float: right; }
-        .gm4html5_login_button { float: left; }
-        .gm4html5_login_header { text-align: center; }
     </style>
 </head>
 <body>
@@ -52,87 +35,13 @@
     </div>
 
     <script type="text/javascript" src="html5game/NXTALE.js?cachebust=938571485"></script>
-    <script>
-        function resizeCanvasToPreset() {
-            const canvas = document.getElementById('canvas');
-            const container = document.getElementById('gm4html5_div_id');
-            const screenW = window.innerWidth;
-            const screenH = window.innerHeight;
-            const resolutions = [
-                { w: 1280, h: 720 }, { w: 1920, h: 1080 },
-                { w: 2560, h: 1440 }, { w: 3840, h: 2160 }
-            ];
-            let chosen = resolutions[0];
-            for (let r of resolutions) {
-                if (screenW >= r.w && screenH >= r.h) chosen = r;
-            }
-            canvas.width = chosen.w;
-            canvas.height = chosen.h;
-            canvas.style.width = screenW + 'px';
-            canvas.style.height = screenH + 'px';
-            container.style.width = screenW + 'px';
-            container.style.height = screenH + 'px';
-            const ctx = canvas.getContext('2d');
-            if (ctx) ctx.imageSmoothingEnabled = false;
-        }
-
-        window.addEventListener('load', resizeCanvasToPreset);
-        window.addEventListener('resize', resizeCanvasToPreset);
-        window.addEventListener('orientationchange', resizeCanvasToPreset);
-    </script>
-
-    <!-- ✅ Firebase Setup -->
+    <script src="rezizeCanvasToPreset.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
-
     <script>
-    // --- USER DETECTION PATCH START ---
-    // Place this at the VERY TOP of your main script block!
     let currentUser = "guest";
     let gameStarted = false;
     let gotUser = false;
-
-    window.addEventListener("message", async (event) => {
-        console.log("[UNDERTALE] Received postMessage:", event.data);
-        if (event.data?.type === "setUser") {
-            gotUser = true;
-            currentUser = event.data.username || "guest";
-            console.log("✅ Username received from Wigdos:", currentUser);
-            await startGame();
-        }
-
-        // Save request from Wigdos
-        if (event.data?.type === "saveGame") {
-            console.log("💾 Save requested by parent");
-            if (currentUser !== "guest") {
-                await saveGameToFirebase();
-            }
-
-            if (event.ports?.[0]) {
-                event.ports[0].postMessage("save-complete");
-            }
-
-            // Clear local save cache
-            const keysToClear = [
-                "CreatedwithGameMaker.0.file0",
-                "CreatedwithGameMaker.0.file9",
-                "CreatedwithGameMaker.0.undertale.ini"
-            ];
-            keysToClear.forEach(key => localStorage.removeItem(key));
-            console.log("🧹 Cleared localStorage cache");
-
-            sessionStorage.removeItem("undertale_loaded");
-        }
-    });
-
-    // Fallback: wait longer for postMessage, but start as guest if no message arrives
-    setTimeout(() => {
-        if (!gotUser && !gameStarted) {
-            console.warn("⏱️ No Wigdos user detected, continuing as guest...");
-            startGame();
-        }
-    }, 10000);
-    // --- USER DETECTION PATCH END ---
 
     const firebaseConfig = {
         apiKey: "AIzaSyDqDU6p8BH1hTqox7f5Sj1ySTWifIP2818",
@@ -143,14 +52,44 @@
         appId: "1:124867645389:web:4530e19e575669f3cabe84",
         measurementId: "G-1KTKSSCJ33"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-
     const saveKeys = [
         "CreatedwithGameMaker.0.file0",
         "CreatedwithGameMaker.0.file9",
         "CreatedwithGameMaker.0.undertale.ini"
     ];
+
+    window.addEventListener("message", async (event) => {
+        const { type, username } = event.data || {};
+        console.log("[UNDERTALE] Received postMessage:", event.data);
+
+        if (type === "setUser") {
+            gotUser = true;
+            currentUser = username || "guest";
+            console.log("✅ Username received:", currentUser);
+            await startGame();
+        }
+
+        if (type === "saveGame") {
+            console.log("💾 Save requested");
+            if (currentUser !== "guest") await saveGame();
+            event.ports?.[0]?.postMessage("save-complete");
+
+            saveKeys.forEach(key => localStorage.removeItem(key));
+            sessionStorage.removeItem("undertale_loaded");
+            console.log("🧹 Cleared local save cache");
+        }
+    });
+
+    // Fallback if no user is received after 10 seconds
+    setTimeout(() => {
+        if (!gotUser && !gameStarted) {
+            console.warn("⏱️ No user detected, starting as guest...");
+            startGame();
+        }
+    }, 1000);
 
     async function startGame() {
         if (gameStarted) return;
@@ -158,65 +97,46 @@
 
         if (!sessionStorage.getItem("undertale_loaded")) {
             sessionStorage.setItem("undertale_loaded", "true");
-            await loadGameFromFirebase();
+            await loadGame();
         } else {
             console.log("🔁 Skipping second load");
         }
 
         console.log("🎮 Starting GameMaker...");
-        if (typeof GameMaker_Init === "function") {
-            GameMaker_Init();
-        }
+        GameMaker_Init?.();
     }
 
-    async function saveGameToFirebase() {
-        if (!currentUser || currentUser === "guest") {
-            console.warn("⛔ Guest users can't save.");
-            return;
-        }
-
-        const data = {};
-        saveKeys.forEach(key => {
-            const val = localStorage.getItem(key);
-            if (val !== null) data[key] = val;
-        });
+    async function saveGame() {
+        const data = Object.fromEntries(
+            saveKeys.map(key => [key, localStorage.getItem(key)]).filter(([_, val]) => val !== null)
+        );
 
         try {
             await db.collection("game_saves").doc(currentUser).set(data);
-            alert("✅ Game saved to cloud for user: " + currentUser);
+            alert("✅ Game saved for: " + currentUser);
         } catch (err) {
-            console.error("Save error:", err);
+            console.error("❌ Save error:", err);
             alert("❌ Failed to save.");
         }
     }
 
-    async function loadGameFromFirebase() {
-        if (!currentUser || currentUser === "guest") {
-            console.warn("⛔ Guest users can't load saves from cloud.");
-            return;
-        }
-        console.log("🔍 Loading save for user:", currentUser);
-
+    async function loadGame() {
         try {
-            const docRef = db.collection("game_saves").doc(currentUser);
-            const doc = await docRef.get();
-            console.log("📄 Document snapshot:", doc);
+            const doc = await db.collection("game_saves").doc(currentUser).get();
+
             if (!doc.exists) {
-                alert("⚠️ No save found for user: " + currentUser);
+                alert("⚠️ No save found for: " + currentUser);
                 return;
             }
 
             const data = doc.data();
-            console.log("💾 Loaded save data:", data);
-            saveKeys.forEach(key => {
-                if (data[key]) {
-                    localStorage.setItem(key, data[key]);
-                }
-            });
+            for (const [key, value] of Object.entries(data)) {
+                if (saveKeys.includes(key)) localStorage.setItem(key, value);
+            }
 
             alert("✅ Game loaded for: " + currentUser);
         } catch (err) {
-            console.error("Load error:", err);
+            console.error("❌ Load error:", err);
             alert("❌ Failed to load.");
         }
     }
