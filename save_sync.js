@@ -23,11 +23,13 @@ window.addEventListener("message", async (event) => {
     }
 
     // 2. Parent requests save
-    if (type === "saveGame") {
-        await saveGame();
+    if (type === "save") {
+        
+        // Store Save Data
+        const saveData = await saveGame();
         // If this is a MessageChannel reply, notify parent
         if (event.ports && event.ports[0]) {
-            event.ports[0].postMessage("save-complete");
+            event.ports[0].postMessage({ status: "success", saveData: saveData });
         }
         // Optionally clear save cache
         saveKeys.forEach(key => localStorage.removeItem(key));
@@ -52,16 +54,12 @@ async function startGame() {
 }
 
 async function saveGame() {
+    // Collect Save Data
     const data = Object.fromEntries(
         saveKeys.map(key => [key, localStorage.getItem(key)]).filter(([_, val]) => val !== null)
     );
-    try {
-        await db.collection("game_saves").doc(currentUser).set(data);
-        // Optionally: alert("✅ Game saved for: " + currentUser);
-    } catch (err) {
-        console.error("❌ Save error:", err);
-        // Optionally: alert("❌ Failed to save.");
-    }
+    // No More DB For You
+    return data;
 }
 
 async function loadGame() {
