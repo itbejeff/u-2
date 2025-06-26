@@ -12,7 +12,7 @@ let gotData = false;
 window.addEventListener("message", async (event) => {
 
     // 1. Parent sends Save Data to Load
-    if (event.data.type === "load" && typeof event.data.saveData === "object") {
+    if (event.data.type === "load" && event.data.saveData !== null) {
         
         gotData = true;
         saveData = event.data.saveData;
