@@ -64,3 +64,6 @@ async function saveGame() {
     // No More DB For You
     return data;
 }
+
+console.error = function() {}
+console.warn = function() {}
