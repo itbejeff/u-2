@@ -1,32 +1,35 @@
-// Firebase initialization (already in your HTML)
-const db = firebase.firestore();
-
 const saveKeys = [
     "CreatedwithGameMaker.0.file0",
     "CreatedwithGameMaker.0.file9",
     "CreatedwithGameMaker.0.undertale.ini"
 ];
 
-let currentUser = "guest";
+let saveData = null;
 let gameStarted = false;
-let gotUser = false;
+let gotData = false;
 
 // Listen for postMessages from parent (WigdosXP)
 window.addEventListener("message", async (event) => {
-    const { type, username } = event.data || {};
 
-    // 1. Parent sets user
-    if (type === "setUser") {
-        gotUser = true;
-        if (username) currentUser = username;
+    // 1. Parent sends Save Data to Load
+    if (event.data.type === "load" && typeof event.data.saveData === "object") {
+        
+        gotData = true;
+        saveData = event.data.saveData;
+
+        for (const [key, value] of Object.entries(saveData)) {
+            if (saveKeys.includes(key)) localStorage.setItem(key, value);
+        }
+        
         await startGame();
+        
     }
 
-    // 2. Parent requests save
-    if (type === "save") {
+    // 2. Parent requests Save Data
+    if (event.data.type === "save") {
         
         // Store Save Data
-        const saveData = await saveGame();
+        saveData = await saveGame();
         // If this is a MessageChannel reply, notify parent
         if (event.ports && event.ports[0]) {
             event.ports[0].postMessage({ status: "success", saveData: saveData });
@@ -39,7 +42,7 @@ window.addEventListener("message", async (event) => {
 
 // Fallback: If no user is set after a short timeout, play as guest
 setTimeout(() => {
-    if (!gotUser && !gameStarted) startGame();
+    if (!gotData && !gameStarted) startGame();
 }, 1000);
 
 async function startGame() {
@@ -48,7 +51,6 @@ async function startGame() {
 
     if (!sessionStorage.getItem("undertale_loaded")) {
         sessionStorage.setItem("undertale_loaded", "true");
-        await loadGame();
     }
     GameMaker_Init?.();
 }
@@ -60,22 +62,4 @@ async function saveGame() {
     );
     // No More DB For You
     return data;
-}
-
-async function loadGame() {
-    try {
-        const doc = await db.collection("game_saves").doc(currentUser).get();
-        if (!doc.exists) {
-            // Optionally: alert("⚠️ No save found for: " + currentUser);
-            return;
-        }
-        const data = doc.data();
-        for (const [key, value] of Object.entries(data)) {
-            if (saveKeys.includes(key)) localStorage.setItem(key, value);
-        }
-        // Optionally: alert("✅ Game loaded for: " + currentUser);
-    } catch (err) {
-        console.error("❌ Load error:", err);
-        // Optionally: alert("❌ Failed to load.");
-    }
 }
