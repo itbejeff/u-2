@@ -32,7 +32,8 @@ window.addEventListener("message", async (event) => {
         saveData = await saveGame();
         // If this is a MessageChannel reply, notify parent
         if (event.ports && event.ports[0]) {
-            event.ports[0].postMessage({ status: "success", saveData: saveData });
+            if (saveData.length > 0) event.ports[0].postMessage({ status: "success", saveData: saveData });
+            else event.ports[0].postMessage({ status: "success" });
         }
         // Optionally clear save cache
         saveKeys.forEach(key => localStorage.removeItem(key));
