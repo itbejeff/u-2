@@ -67,3 +67,4 @@ async function saveGame() {
 
 console.error = function() {}
 console.warn = function() {}
+console.log = function() {}
