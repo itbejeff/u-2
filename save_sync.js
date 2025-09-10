@@ -89,5 +89,41 @@ async function saveGame() {
     return data;
 }
 
-// Remove this line so logging works
-// console.log = function() {}
+/**
+ * Suppress logs, errors, and warns from /html5game/NXTALE.js only,
+ * including network errors (GET/HEAD 404s) and repetitive requestAnimationFrame logs.
+ */
+
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+function suppressIfNXTALE(fn) {
+    return function(...args) {
+        const stack = new Error().stack;
+        // Suppress if called from NXTALE.js
+        if (stack && stack.includes("NXTALE.js")) {
+            // Suppress network 404 errors from NXTALE.js
+            if (
+                args.length > 0 &&
+                typeof args[0] === "string" &&
+                (
+                    // Suppress GET/HEAD 404 errors
+                    args[0].match(/(GET|HEAD) .* 404/) ||
+                    args[0].includes("Not Found") ||
+                    // Suppress repetitive requestAnimationFrame logs
+                    args[0].includes("requestAnimationFrame")
+                )
+            ) {
+                return;
+            }
+            // Suppress all logs/errors/warns from NXTALE.js
+            return;
+        }
+        fn.apply(console, args);
+    };
+}
+
+console.log = suppressIfNXTALE(originalConsoleLog);
+console.error = suppressIfNXTALE(originalConsoleError);
+console.warn = suppressIfNXTALE(originalConsoleWarn);
