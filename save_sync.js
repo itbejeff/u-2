@@ -10,32 +10,45 @@ let gotData = false;
 
 // Listen for postMessages from parent (WigdosXP)
 window.addEventListener("message", async (event) => {
+    console.log("[save_sync] Received message:", event.data);
 
     // 1. Parent sends Save Data to Load
     if (event.data.type === "load" && event.data.saveData !== null) {
-        
+        console.log("[save_sync] Loading save data from parent...");
         gotData = true;
         saveData = event.data.saveData;
 
         for (const [key, value] of Object.entries(saveData)) {
-            if (saveKeys.includes(key)) localStorage.setItem(key, value);
+            if (saveKeys.includes(key)) {
+                console.log(`[save_sync] Setting localStorage key: ${key}`);
+                localStorage.setItem(key, value);
+            }
         }
-        
+
+        console.log("[save_sync] Starting game after loading save data...");
         await startGame();
-        
     }
 
     // 2. Parent requests Save Data
     if (event.data.type === "save") {
-        
+        console.log("[save_sync] Parent requested save data...");
         // Store Save Data
         saveData = await saveGame();
+        console.log("[save_sync] Save data collected:", saveData);
+
         // If this is a MessageChannel reply, notify parent
         if (event.ports && event.ports[0]) {
-            if (saveData.length > 0) event.ports[0].postMessage({ status: "success", saveData: saveData });
-            else event.ports[0].postMessage({ status: "success" });
+            if (Object.keys(saveData).length > 0) {
+                console.log("[save_sync] Sending save data to parent via MessageChannel...");
+                event.ports[0].postMessage({ status: "success", saveData: saveData });
+            } else {
+                console.log("[save_sync] No save data to send, sending success status only.");
+                event.ports[0].postMessage({ status: "success" });
+            }
         }
+
         // Optionally clear save cache
+        console.log("[save_sync] Clearing localStorage save keys...");
         saveKeys.forEach(key => localStorage.removeItem(key));
         sessionStorage.removeItem("undertale_loaded");
     }
@@ -43,26 +56,38 @@ window.addEventListener("message", async (event) => {
 
 // Fallback: If no user is set after a short timeout, play as guest
 setTimeout(() => {
-    if (!gotData && !gameStarted) startGame();
+    console.log("[save_sync] Timeout reached, checking if game should start as guest...");
+    if (!gotData && !gameStarted) {
+        console.log("[save_sync] No save data received, starting game as guest...");
+        startGame();
+    }
 }, 1000);
 
 async function startGame() {
-    if (gameStarted) return;
+    if (gameStarted) {
+        console.log("[save_sync] Game already started, skipping...");
+        return;
+    }
     gameStarted = true;
 
     if (!sessionStorage.getItem("undertale_loaded")) {
+        console.log("[save_sync] Setting undertale_loaded in sessionStorage...");
         sessionStorage.setItem("undertale_loaded", "true");
     }
+    console.log("[save_sync] Initializing GameMaker...");
     GameMaker_Init?.();
 }
 
 async function saveGame() {
+    console.log("[save_sync] Collecting save data from localStorage...");
     // Collect Save Data
     const data = Object.fromEntries(
         saveKeys.map(key => [key, localStorage.getItem(key)]).filter(([_, val]) => val !== null)
     );
+    console.log("[save_sync] Save data collected:", data);
     // No More DB For You
     return data;
 }
 
-console.log = function() {}
+// Remove this line so logging works
+// console.log = function() {}
