@@ -50,7 +50,7 @@ window.addEventListener("message", async (event) => {
         // Optionally clear save cache
         console.log("[save_sync] Clearing localStorage save keys...");
         saveKeys.forEach(key => localStorage.removeItem(key));
-        sessionStorage.removeItem("undertale_loaded");
+        localStorage.removeItem("undertale_loaded");
     }
 });
 
@@ -70,9 +70,9 @@ async function startGame() {
     }
     gameStarted = true;
 
-    if (!sessionStorage.getItem("undertale_loaded")) {
-        console.log("[save_sync] Setting undertale_loaded in sessionStorage...");
-        sessionStorage.setItem("undertale_loaded", "true");
+    if (!localStorage.getItem("undertale_loaded")) {
+        console.log("[save_sync] Setting undertale_loaded in localStorage...");
+        localStorage.setItem("undertale_loaded", "true");
     }
     console.log("[save_sync] Initializing GameMaker...");
     GameMaker_Init?.();
