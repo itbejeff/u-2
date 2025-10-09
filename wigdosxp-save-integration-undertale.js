@@ -26,14 +26,21 @@
     
     log('WigdosXP Save Integration loaded for game:', GAME_CONFIG.gameId);
     
-    // Listen for save/load requests from WigdosXP parent frame
-    window.addEventListener('message', function(event) {
-        // Basic validation
-        if (!event.data || !event.data.type) return;
-        
-        log('Received message from parent:', event.data);
-        
-        switch (event.data.type) {
+        // Listen for save/load requests from WigdosXP parent frame
+        window.addEventListener('message', function(event) {
+            // Basic validation - ensure we're in an iframe and message is from parent
+            if (window.parent === window || !event.data || !event.data.type) return;
+            
+            // Only process WigdosXP save system messages
+            const validMessageTypes = [
+                'getAllLocalStorageData',
+                'setAllLocalStorageData',
+                'requestSnapshot'
+            ];
+            
+            if (!validMessageTypes.includes(event.data.type)) return;
+            
+            log('Received message from parent:', event.data);        switch (event.data.type) {
             case 'getAllLocalStorageData':
                 handleGetAllLocalStorageData(event);
                 break;
@@ -207,8 +214,14 @@
         }));
     });
     
-    // Send ready signal to parent (optional)
-    window.addEventListener('load', function() {
+    // Initialize the complete integration system
+    function initializeIntegration() {
+        log('Initializing complete integration system');
+        
+        // Set up all message listeners and prepare for save/load operations
+        setupPostGameIntegration();
+        
+        // Send ready signal to parent if we're in an iframe
         if (window.parent !== window) {
             window.parent.postMessage({
                 type: 'wigdosxp-integration-ready',
@@ -216,8 +229,14 @@
             }, '*');
             log('Integration ready signal sent to parent');
         }
-    });
+    }
     
-    log('WigdosXP Save Integration initialization complete');
+    // Send ready signal to parent (optional)
+    window.addEventListener('load', function() {
+        // Wait a bit more to ensure game is fully initialized
+        setTimeout(function() {
+            initializeIntegration();
+        }, 2000); // Wait 2 seconds after load event
+    });    log('WigdosXP Save Integration initialization complete');
     
 })();
