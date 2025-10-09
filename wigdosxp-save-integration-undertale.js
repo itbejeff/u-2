@@ -4,8 +4,9 @@
  * This script enables Undertale to work with WigdosXP's save system
  * when running as a cross-origin iframe.
  * 
- * Include this script in your Undertale HTML file:
- * <script src="wigdosxp-save-integration.js"></script>
+ * Include this script in your Undertale HTML file BEFORE the game script:
+ * <script src="wigdosxp-save-integration-undertale.js"></script>
+ * <script src="html5game/NXTALE.js"></script>
  */
 
 (function() {
@@ -17,6 +18,10 @@
         debug: true   // Set to false to disable console logging
     };
     
+    // Game startup management
+    const START_MESSAGE = '✅ Save data loaded from Firestore into iframe';
+    let _gameStarted = false;
+    
     // Debug logging helper
     function log(message, data = null) {
         if (GAME_CONFIG.debug) {
@@ -24,8 +29,159 @@
         }
     }
     
+    // Game startup function - called when save data is ready or timeout reached
+    function _startGameOnce() {
+        if (_gameStarted) return;
+        _gameStarted = true;
+        
+        log('Starting game...');
+        
+        if (typeof startGame === 'function') {
+            try { 
+                startGame(); 
+                log('Game started using startGame() function');
+            } catch (e) { 
+                console.error('Error calling startGame()', e); 
+            }
+        } else {
+            if (!localStorage.getItem('undertale_loaded')) {
+                localStorage.setItem('undertale_loaded', 'true');
+            }
+            try { 
+                GameMaker_Init?.(); 
+                log('Game started using GameMaker_Init()');
+            } catch (e) { 
+                console.error('Error calling GameMaker_Init()', e); 
+            }
+        }
+    }
+    
     log('WigdosXP Save Integration loaded for game:', GAME_CONFIG.gameId);
     
+    // Initialize based on environment
+    if (window.parent !== window) {
+        log('Detected WigdosXP iframe environment - initializing save system');
+        initializeWigdosXPIntegration();
+        
+        // Set up console.log wrapper to detect save success message
+        setupConsoleWrapper();
+        
+        // Fallback: start the game after 2 seconds if nothing triggered it
+        setTimeout(() => {
+            if (!_gameStarted) {
+                log('Timeout reached; starting game as fallback.');
+                _startGameOnce();
+            }
+        }, 2000);
+    } else {
+        log('Running standalone - save integration disabled, but will still start game');
+        
+        // In standalone mode, we still want to start the game
+        // Set up console.log wrapper to detect save success message
+        setupConsoleWrapper();
+        
+        // Start the game after a short delay to ensure everything is loaded
+        setTimeout(() => {
+            if (!_gameStarted) {
+                log('Standalone mode: starting game after timeout.');
+                _startGameOnce();
+            }
+        }, 1000);
+    }
+    
+    function initializeWigdosXPIntegration() {
+        // Request initial save data
+        requestInitialSaveData();
+        
+        // Set up message listeners for ongoing operations
+        setupMessageListeners();
+        
+        // Send ready signal
+        sendReadySignal();
+    }
+    
+    // Request initial save data from WigdosXP parent
+    function requestInitialSaveData() {
+        const messageId = `initial_load_${Date.now()}`;
+        
+        log('Requesting initial save data from parent...');
+        
+        // Set timeout for response
+        const timeout = setTimeout(() => {
+            log('Timeout waiting for initial save data - continuing without it');
+        }, 5000);
+        
+        // Listen for response
+        const responseHandler = function(event) {
+            if (event.data && event.data.type === 'initialSaveDataResponse' && event.data.messageId === messageId) {
+                clearTimeout(timeout);
+                window.removeEventListener('message', responseHandler);
+                
+                log('Received initial save data response:', event.data);
+                
+                if (event.data.allLocalStorageData && Object.keys(event.data.allLocalStorageData).length > 0) {
+                    log('Loading initial save data:', Object.keys(event.data.allLocalStorageData));
+                    
+                    // Load the save data into localStorage
+                    Object.keys(event.data.allLocalStorageData).forEach(key => {
+                        localStorage.setItem(key, event.data.allLocalStorageData[key]);
+                    });
+                    
+                    log('Initial save data loaded successfully');
+                    
+                    // Start the game when initial save data is loaded
+                    log('Save data loaded from initial request; starting game.');
+                    _startGameOnce();
+                    
+                    // Dispatch event for game to know save data is ready
+                    window.dispatchEvent(new CustomEvent('wigdosxp-save-loaded', {
+                        detail: {
+                            gameId: GAME_CONFIG.gameId,
+                            data: event.data.allLocalStorageData,
+                            isInitialLoad: true
+                        }
+                    }));
+                } else {
+                    log('No initial save data available');
+                    // Even if no save data, we might want to start the game
+                    // Let the timeout handle this case
+                }
+            }
+        };
+        
+        window.addEventListener('message', responseHandler);
+        
+        // Send request to parent
+        window.parent.postMessage({
+            type: 'getInitialSaveData',
+            gameId: GAME_CONFIG.gameId,
+            messageId: messageId
+        }, '*');
+    }
+    
+    // Set up console.log wrapper to detect save success message
+    function setupConsoleWrapper() {
+        if (typeof console === 'undefined') return;
+        
+        const _orig = console.log.bind(console);
+        console.log = function(...args) {
+            try { _orig(...args); } catch (e) { /* ignore */ }
+            try {
+                if (_gameStarted) return;
+                for (const a of args) {
+                    if (typeof a === 'string' && a.includes(START_MESSAGE)) {
+                        log('Detected save-ready log; starting game.');
+                        _startGameOnce();
+                        break;
+                    }
+                }
+            } catch (e) {
+                try { _orig('[WigdosXP Save Integration] wrapper error', e); } catch (_) {}
+            }
+        };
+    }
+    
+    function setupMessageListeners() {
         // Listen for save/load requests from WigdosXP parent frame
         window.addEventListener('message', function(event) {
             // Basic validation - ensure we're in an iframe and message is from parent
@@ -40,20 +196,34 @@
             
             if (!validMessageTypes.includes(event.data.type)) return;
             
-            log('Received message from parent:', event.data);        switch (event.data.type) {
-            case 'getAllLocalStorageData':
-                handleGetAllLocalStorageData(event);
-                break;
-                
-            case 'setAllLocalStorageData':
-                handleSetAllLocalStorageData(event);
-                break;
-                
-            case 'requestSnapshot':
-                handleSnapshotRequest(event);
-                break;
-        }
-    });
+            log('Received message from parent:', event.data);
+            
+            switch (event.data.type) {
+                case 'getAllLocalStorageData':
+                    handleGetAllLocalStorageData(event);
+                    break;
+                    
+                case 'setAllLocalStorageData':
+                    handleSetAllLocalStorageData(event);
+                    break;
+                    
+                case 'requestSnapshot':
+                    handleSnapshotRequest(event);
+                    break;
+            }
+        });
+    }
+    
+    function sendReadySignal() {
+        // Send ready signal after a short delay
+        setTimeout(() => {
+            window.parent.postMessage({
+                type: 'wigdosxp-integration-ready',
+                gameId: GAME_CONFIG.gameId
+            }, '*');
+            log('Integration ready signal sent to parent');
+        }, 1000);
+    }
     
     // Handle save data request from WigdosXP (get all localStorage)
     function handleGetAllLocalStorageData(event) {
@@ -114,6 +284,10 @@
                 });
                 
                 log('All localStorage data restored successfully');
+                
+                // Start the game when save data is restored
+                log('Save data restored; starting game.');
+                _startGameOnce();
                 
                 // Notify the game that save data was loaded
                 window.dispatchEvent(new CustomEvent('wigdosxp-save-loaded', {
@@ -202,41 +376,12 @@
     window.addEventListener('wigdosxp-save-loaded', function(event) {
         log('Save data loaded event received:', event.detail);
         
-        // Undertale-specific: You might want to trigger a game refresh here
-        // For example, if Undertale has a function to reload game state:
-        // if (typeof refreshGameState === 'function') {
-        //     refreshGameState();
-        // }
-        
-        // Or dispatch a custom event that Undertale can listen for:
+        // Dispatch a custom event that Undertale can listen for:
         window.dispatchEvent(new CustomEvent('gameDataLoaded', {
             detail: event.detail
         }));
     });
     
-    // Initialize the complete integration system
-    function initializeIntegration() {
-        log('Initializing complete integration system');
-        
-        // Set up all message listeners and prepare for save/load operations
-        setupPostGameIntegration();
-        
-        // Send ready signal to parent if we're in an iframe
-        if (window.parent !== window) {
-            window.parent.postMessage({
-                type: 'wigdosxp-integration-ready',
-                gameId: GAME_CONFIG.gameId
-            }, '*');
-            log('Integration ready signal sent to parent');
-        }
-    }
-    
-    // Send ready signal to parent (optional)
-    window.addEventListener('load', function() {
-        // Wait a bit more to ensure game is fully initialized
-        setTimeout(function() {
-            initializeIntegration();
-        }, 2000); // Wait 2 seconds after load event
-    });    log('WigdosXP Save Integration initialization complete');
+    log('WigdosXP Save Integration initialization complete');
     
 })();
