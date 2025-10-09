@@ -317,11 +317,21 @@
                 
                 log('All localStorage data restored successfully');
                 
-                // Start the game when save data is restored (with a small delay)
+                // For Undertale, we need to reload the page when save data is restored
+                // This ensures the game properly loads with the restored save data
+                log('Save data restored; reloading page to apply save data.');
+                
+                // Send success response first
+                event.source.postMessage({
+                    type: 'loadDataResponse',
+                    messageId: event.data.messageId,
+                    success: true
+                }, event.origin);
+                
+                // Small delay then reload
                 setTimeout(() => {
-                    log('Save data restored; starting game.');
-                    _startGameOnce();
-                }, 500);
+                    window.location.reload();
+                }, 100);
                 
                 // Notify the game that save data was loaded
                 window.dispatchEvent(new CustomEvent('wigdosxp-save-loaded', {
@@ -334,16 +344,16 @@
                 log('Dispatched wigdosxp-save-loaded event');
             } else {
                 log('No save data provided to restore');
+                
+                // Send success response for no data case
+                event.source.postMessage({
+                    type: 'loadDataResponse',
+                    messageId: event.data.messageId,
+                    success: true
+                }, event.origin);
+                
+                log('Load data response sent to parent (no data case)');
             }
-            
-            // Send success response
-            event.source.postMessage({
-                type: 'loadDataResponse',
-                messageId: event.data.messageId,
-                success: true
-            }, event.origin);
-            
-            log('Load data response sent to parent');
             
         } catch (error) {
             console.error('Error setting localStorage data:', error);
