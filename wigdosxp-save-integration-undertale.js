@@ -21,6 +21,7 @@
     // Game startup management
     const START_MESSAGE = '✅ Save data loaded from Firestore into iframe';
     let _gameStarted = false;
+    let _startAttempted = false;
     
     // Debug logging helper
     function log(message, data = null) {
@@ -31,29 +32,58 @@
     
     // Game startup function - called when save data is ready or timeout reached
     function _startGameOnce() {
-        if (_gameStarted) return;
-        _gameStarted = true;
+        if (_gameStarted || _startAttempted) return;
+        _startAttempted = true;
         
         log('Starting game...');
         
+        // Try different possible game start functions in order of preference
         if (typeof startGame === 'function') {
             try { 
                 startGame(); 
                 log('Game started using startGame() function');
+                _gameStarted = true;
+                return;
             } catch (e) { 
                 console.error('Error calling startGame()', e); 
             }
-        } else {
-            if (!localStorage.getItem('undertale_loaded')) {
-                localStorage.setItem('undertale_loaded', 'true');
-            }
+        }
+        
+        // Try GameMaker_Init
+        if (typeof GameMaker_Init === 'function') {
             try { 
-                GameMaker_Init?.(); 
+                GameMaker_Init(); 
                 log('Game started using GameMaker_Init()');
+                _gameStarted = true;
+                return;
             } catch (e) { 
                 console.error('Error calling GameMaker_Init()', e); 
             }
         }
+        
+        // Try window.GameMaker_Init
+        if (typeof window.GameMaker_Init === 'function') {
+            try { 
+                window.GameMaker_Init(); 
+                log('Game started using window.GameMaker_Init()');
+                _gameStarted = true;
+                return;
+            } catch (e) { 
+                console.error('Error calling window.GameMaker_Init()', e); 
+            }
+        }
+        
+        // Set undertale_loaded flag regardless
+        if (!localStorage.getItem('undertale_loaded')) {
+            localStorage.setItem('undertale_loaded', 'true');
+            log('Set undertale_loaded flag in localStorage');
+        }
+        
+        // If no initialization function worked, just log and continue
+        log('No game initialization function found or all failed - game should auto-start');
+        
+        // Mark as started even if we couldn't call an init function
+        _gameStarted = true;
     }
     
     log('WigdosXP Save Integration loaded for game:', GAME_CONFIG.gameId);
@@ -129,9 +159,11 @@
                     
                     log('Initial save data loaded successfully');
                     
-                    // Start the game when initial save data is loaded
-                    log('Save data loaded from initial request; starting game.');
-                    _startGameOnce();
+                    // Start the game when initial save data is loaded (with a small delay)
+                    setTimeout(() => {
+                        log('Save data loaded from initial request; starting game.');
+                        _startGameOnce();
+                    }, 500);
                     
                     // Dispatch event for game to know save data is ready
                     window.dispatchEvent(new CustomEvent('wigdosxp-save-loaded', {
@@ -285,9 +317,11 @@
                 
                 log('All localStorage data restored successfully');
                 
-                // Start the game when save data is restored
-                log('Save data restored; starting game.');
-                _startGameOnce();
+                // Start the game when save data is restored (with a small delay)
+                setTimeout(() => {
+                    log('Save data restored; starting game.');
+                    _startGameOnce();
+                }, 500);
                 
                 // Notify the game that save data was loaded
                 window.dispatchEvent(new CustomEvent('wigdosxp-save-loaded', {
