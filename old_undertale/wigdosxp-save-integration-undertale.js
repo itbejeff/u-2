@@ -97,12 +97,16 @@
         setupConsoleWrapper();
         
         // Fallback: start the game after 2 seconds if nothing triggered it
-        setTimeout(() => {
-            if (!_gameStarted) {
-                log('Timeout reached; starting game as fallback.');
-                _startGameOnce();
-            }
-        }, 2000);
+            setTimeout(() => {
+                if (!_gameStarted) {
+                    log('Timeout reached; starting game as fallback.');
+                    // Wait for the custom loader to finish before starting
+                    (async () => {
+                        try { if (window.loaderReadyPromise) await window.loaderReadyPromise; } catch(e){}
+                        _startGameOnce();
+                    })();
+                }
+            }, 2000);
     } else {
         log('Running standalone - save integration disabled, but will still start game');
         
@@ -114,7 +118,11 @@
         setTimeout(() => {
             if (!_gameStarted) {
                 log('Standalone mode: starting game after timeout.');
-                _startGameOnce();
+                // Wait for the custom loader to finish before starting
+                (async () => {
+                    try { if (window.loaderReadyPromise) await window.loaderReadyPromise; } catch(e){}
+                    _startGameOnce();
+                })();
             }
         }, 1000);
     }
@@ -162,7 +170,10 @@
                     // Start the game when initial save data is loaded (with a small delay)
                     setTimeout(() => {
                         log('Save data loaded from initial request; starting game.');
-                        _startGameOnce();
+                        (async () => {
+                            try { if (window.loaderReadyPromise) await window.loaderReadyPromise; } catch(e){}
+                            _startGameOnce();
+                        })();
                     }, 500);
                     
                     // Dispatch event for game to know save data is ready
@@ -203,7 +214,10 @@
                 for (const a of args) {
                     if (typeof a === 'string' && a.includes(START_MESSAGE)) {
                         log('Detected save-ready log; starting game.');
-                        _startGameOnce();
+                        (async () => {
+                            try { if (window.loaderReadyPromise) await window.loaderReadyPromise; } catch(e){}
+                            _startGameOnce();
+                        })();
                         break;
                     }
                 }
