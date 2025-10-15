@@ -148,7 +148,7 @@ const SAVE_SYNC = {
           this.exportToLocalStorage().catch(err => {
             console.error('Periodic backup failed:', err);
           });
-        }, 30000);
+        }, 10000);
       })
       .catch(error => {
         console.error('Save Data Sync initialization failed:', error);
