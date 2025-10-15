@@ -1,22 +1,26 @@
 // Save Data Sync Script - IndexedDB <-> Local Storage
-// Add this near the top of your script, after the Module definition
-
 const SAVE_SYNC = {
-  DB_NAME: 'IndexedDB', // Adjust this to your actual database name if different
-  STORE_NAME: '/_savedata',
-  LOCAL_STORAGE_PREFIX: 'savedata_',
+  DB_NAME: '/_savedata', // The root database
+  STORE_NAME: 'FILE_DATA', // The object store
+  LOCAL_STORAGE_PREFIX: 'ut_save_',
   
-  // Open IndexedDB connection
   openDB: function() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.DB_NAME);
       
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const db = request.result;
+        // Verify the object store exists
+        if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+          reject(new Error(`Store ${this.STORE_NAME} not found in database`));
+          return;
+        }
+        resolve(db);
+      };
     });
   },
   
-  // Get all data from IndexedDB
   getAllFromIndexedDB: function() {
     return new Promise(async (resolve, reject) => {
       try {
@@ -27,13 +31,14 @@ const SAVE_SYNC = {
         
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
-          const keys = store.getAllKeys();
-          keys.onsuccess = () => {
+          const keysRequest = store.getAllKeys();
+          keysRequest.onsuccess = () => {
             resolve({
               values: request.result,
-              keys: keys.result
+              keys: keysRequest.result
             });
           };
+          keysRequest.onerror = () => reject(keysRequest.error);
         };
       } catch (error) {
         reject(error);
@@ -41,7 +46,6 @@ const SAVE_SYNC = {
     });
   },
   
-  // Save data to IndexedDB
   saveToIndexedDB: function(key, data) {
     return new Promise(async (resolve, reject) => {
       try {
@@ -58,21 +62,25 @@ const SAVE_SYNC = {
     });
   },
   
-  // Export IndexedDB data to Local Storage
   exportToLocalStorage: function() {
     return new Promise(async (resolve, reject) => {
       try {
         const data = await this.getAllFromIndexedDB();
         
+        if (data.keys.length === 0) {
+          console.log('No save data in IndexedDB to export');
+          resolve(0);
+          return;
+        }
+        
         data.keys.forEach((key, index) => {
           const localStorageKey = this.LOCAL_STORAGE_PREFIX + key;
           const value = data.values[index];
           
-          // Store as JSON string
           localStorage.setItem(localStorageKey, JSON.stringify(value));
         });
         
-        console.log('Save data exported to Local Storage:', data.keys.length, 'files');
+        console.log('✓ Save data exported to Local Storage:', data.keys.length, 'files');
         resolve(data.keys.length);
       } catch (error) {
         console.error('Error exporting to Local Storage:', error);
@@ -81,18 +89,15 @@ const SAVE_SYNC = {
     });
   },
   
-  // Import Local Storage data to IndexedDB (overwrites IndexedDB)
   importFromLocalStorage: function() {
     return new Promise(async (resolve, reject) => {
       try {
         let importCount = 0;
         const promises = [];
         
-        // Scan Local Storage for save data
         for (let i = 0; i < localStorage.length; i++) {
           const localKey = localStorage.key(i);
           
-          // Check if this is a save data key
           if (localKey && localKey.startsWith(this.LOCAL_STORAGE_PREFIX)) {
             const indexedDBKey = localKey.substring(this.LOCAL_STORAGE_PREFIX.length);
             const dataString = localStorage.getItem(localKey);
@@ -100,11 +105,10 @@ const SAVE_SYNC = {
             try {
               const data = JSON.parse(dataString);
               
-              // Save to IndexedDB (overwrite)
               promises.push(
                 this.saveToIndexedDB(indexedDBKey, data).then(() => {
                   importCount++;
-                  console.log('Restored save file to IndexedDB:', indexedDBKey);
+                  console.log('✓ Restored save file:', indexedDBKey);
                 })
               );
             } catch (parseError) {
@@ -116,8 +120,7 @@ const SAVE_SYNC = {
         await Promise.all(promises);
         
         if (importCount > 0) {
-          console.log('Save data imported from Local Storage:', importCount, 'files');
-          showRollbackMessage(`Restored ${importCount} save file(s) from backup`);
+          console.log('✓ Save data imported from Local Storage:', importCount, 'files');
         } else {
           console.log('No save data found in Local Storage to import');
         }
@@ -130,20 +133,17 @@ const SAVE_SYNC = {
     });
   },
   
-  // Initialize sync on game start
   initialize: function() {
     console.log('Initializing Save Data Sync...');
     
-    // First, try to import from Local Storage (restore saves)
     this.importFromLocalStorage()
       .then(() => {
-        // Then export current IndexedDB state to Local Storage (backup)
         return this.exportToLocalStorage();
       })
       .then(() => {
-        console.log('Save Data Sync initialized successfully');
+        console.log('✓ Save Data Sync initialized successfully');
         
-        // Set up periodic backup (every 30 seconds)
+        // Set up periodic backup every 30 seconds
         setInterval(() => {
           this.exportToLocalStorage().catch(err => {
             console.error('Periodic backup failed:', err);
@@ -156,12 +156,30 @@ const SAVE_SYNC = {
   }
 };
 
-// Add to Module.preRun to execute before game starts
-Module.preRun.push(function() {
-  console.log('Running save data sync...');
+// Wait for the game's IndexedDB to be created
+window.addEventListener('load', function() {
+  let attempts = 0;
+  const maxAttempts = 20;
   
-  // Wait a bit for IndexedDB to be ready
-  setTimeout(() => {
-    SAVE_SYNC.initialize();
-  }, 100);
+  function tryInitialize() {
+    attempts++;
+    
+    SAVE_SYNC.openDB()
+      .then(() => {
+        console.log('✓ Database "/" found, initializing sync...');
+        SAVE_SYNC.initialize();
+      })
+      .catch(error => {
+        if (attempts < maxAttempts) {
+          console.log(`Waiting for database... (attempt ${attempts}/${maxAttempts})`);
+          setTimeout(tryInitialize, 1500);
+        } else {
+          console.error('Database not found after', maxAttempts, 'attempts. Save sync disabled.');
+          console.error('Last error:', error.message);
+        }
+      });
+  }
+  
+  // Start trying after 3 seconds (game needs more time to create the database)
+  setTimeout(tryInitialize, 3000);
 });
