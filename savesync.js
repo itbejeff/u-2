@@ -24,7 +24,7 @@
         localStoragePrefix: 'ut_save_',
         
         // Sync intervals
-        indexedDBSyncInterval: 10000, // 10 seconds
+        indexedDBSyncInterval: 30000, // 30 seconds
         wigdosXPSyncInterval: 5000     // 5 seconds
     };
     
@@ -110,8 +110,15 @@
         openDB: function() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(CONFIG.db.name);
-                
+
                 request.onerror = () => reject(request.error);
+                request.onupgradeneeded = () => {
+                    const db = request.result;
+                    if (!db.objectStoreNames.contains(CONFIG.db.storeName)) {
+                        db.createObjectStore(CONFIG.db.storeName);
+                        log(`Created object store: ${CONFIG.db.storeName}`);
+                    }
+                };
                 request.onsuccess = () => {
                     const db = request.result;
                     if (!db.objectStoreNames.contains(CONFIG.db.storeName)) {
@@ -122,7 +129,7 @@
                 };
             });
         },
-        
+
         getAllFromIndexedDB: function() {
             return new Promise(async (resolve, reject) => {
                 try {
@@ -130,7 +137,7 @@
                     const transaction = db.transaction([CONFIG.db.storeName], 'readonly');
                     const store = transaction.objectStore(CONFIG.db.storeName);
                     const request = store.getAll();
-                    
+
                     request.onerror = () => reject(request.error);
                     request.onsuccess = () => {
                         const keysRequest = store.getAllKeys();
@@ -147,7 +154,7 @@
                 }
             });
         },
-        
+
         saveToIndexedDB: function(key, data) {
             return new Promise(async (resolve, reject) => {
                 try {
@@ -155,7 +162,7 @@
                     const transaction = db.transaction([CONFIG.db.storeName], 'readwrite');
                     const store = transaction.objectStore(CONFIG.db.storeName);
                     const request = store.put(data, key);
-                    
+
                     request.onerror = () => reject(request.error);
                     request.onsuccess = () => resolve(request.result);
                 } catch (error) {
@@ -163,55 +170,60 @@
                 }
             });
         },
-        
+
         // Export IndexedDB → localStorage
         exportToLocalStorage: function() {
             return new Promise(async (resolve, reject) => {
                 try {
                     const data = await this.getAllFromIndexedDB();
-                    
+                    data.values.forEach((item) => {
+                        if (item.timestamp && !(item.timestamp instanceof Date)) {
+                            item.timestamp = new Date(item.timestamp);
+                        }
+                    });
+
                     if (data.keys.length === 0) {
                         log('No save data in IndexedDB to export');
                         resolve(0);
                         return;
                     }
-                    
+
                     data.keys.forEach((key, index) => {
                         const localStorageKey = CONFIG.localStoragePrefix + key;
                         const value = data.values[index];
                         localStorage.setItem(localStorageKey, JSON.stringify(value));
                     });
-                    
+
                     log('✓ IndexedDB → localStorage:', data.keys.length, 'files');
                     resolve(data.keys.length);
-                    
+
                     // Notify WigdosXP that save data changed
                     WigdosXPSync.notifySaveDataChanged();
-                    
+
                 } catch (error) {
                     console.error('Error exporting to localStorage:', error);
                     reject(error);
                 }
             });
         },
-        
+
         // Import localStorage → IndexedDB
         importFromLocalStorage: function() {
             return new Promise(async (resolve, reject) => {
                 try {
                     let importCount = 0;
                     const promises = [];
-                    
+
                     for (let i = 0; i < localStorage.length; i++) {
                         const localKey = localStorage.key(i);
-                        
+
                         if (localKey && localKey.startsWith(CONFIG.localStoragePrefix)) {
                             const indexedDBKey = localKey.substring(CONFIG.localStoragePrefix.length);
                             const dataString = localStorage.getItem(localKey);
-                            
+
                             try {
                                 const data = JSON.parse(dataString);
-                                
+
                                 promises.push(
                                     this.saveToIndexedDB(indexedDBKey, data).then(() => {
                                         importCount++;
@@ -223,13 +235,13 @@
                             }
                         }
                     }
-                    
+
                     await Promise.all(promises);
-                    
+
                     if (importCount > 0) {
                         log('✓ localStorage → IndexedDB:', importCount, 'files');
                     }
-                    
+
                     resolve(importCount);
                 } catch (error) {
                     console.error('Error importing from localStorage:', error);
@@ -237,17 +249,17 @@
                 }
             });
         },
-        
+
         initialize: function() {
             log('Initializing IndexedDB sync...');
-            
+
             this.importFromLocalStorage()
                 .then(() => {
                     return this.exportToLocalStorage();
                 })
                 .then(() => {
                     log('✓ IndexedDB sync initialized');
-                    
+
                     // Periodic IndexedDB → localStorage sync
                     setInterval(() => {
                         this.exportToLocalStorage().catch(err => {

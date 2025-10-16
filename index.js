@@ -820,14 +820,6 @@ if (/Android|iPhone|iPod/i.test(navigator.userAgent)) {
   outputContainerElement.hidden = true;
 }
 
-document.addEventListener("visibilitychange", (event) => {
-  if (document.visibilityState != "visible") {
-    pause();
-  } else if (isMultiplayer()) {
-    resume();
-  }
-});
-
 window.addEventListener("load", (event) => {
   if ((!window.oprt || !window.oprt.enterFullscreen) && (!window.chrome || !window.chrome.runtime || !window.chrome.runtime.sendMessage)) {
     quitButton.hidden = true;
