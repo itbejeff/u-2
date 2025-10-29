@@ -587,7 +587,7 @@ c @ runner.js:284Understand this error
 savesync.js:88 GML_async_wget2_data called for mus_flowey.ogg
 savesync.js:88 __gx_check_cache for mus_flowey.ogg cached files {} manifest files {}
 savesync.js:88 in cache mus_flowey.ogg == 0
-index.js:75 [post-exception status] Exception thrown, see JavaScript console
+index.js:75 [post-exception status]
 printErr @ index.js:75
 Module.setStatus @ index.js:131
 window.onerror @ index.js:128
@@ -1195,7 +1195,7 @@ requestAnimationFrame
 c @ runner.js:284
 requestAnimationFrame
 c @ runner.js:284Understand this error
-index.js:75 [post-exception status] Exception thrown, see JavaScript console
+index.js:75 [post-exception status]
 printErr @ index.js:75
 Module.setStatus @ index.js:131
 window.onerror @ index.js:128
@@ -1393,7 +1393,7 @@ requestAnimationFrame
 c @ runner.js:284
 requestAnimationFrame
 c @ runner.js:284Understand this error
-index.js:75 [post-exception status] Exception thrown, see JavaScript console
+index.js:75 [post-exception status]
 printErr @ index.js:75
 Module.setStatus @ index.js:131
 window.onerror @ index.js:128
@@ -1591,7 +1591,7 @@ requestAnimationFrame
 c @ runner.js:284
 requestAnimationFrame
 c @ runner.js:284Understand this error
-index.js:75 [post-exception status] Exception thrown, see JavaScript console
+index.js:75 [post-exception status]
 printErr @ index.js:75
 Module.setStatus @ index.js:131
 window.onerror @ index.js:128
