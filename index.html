@@ -186,6 +186,52 @@
     }
   });
   </script>
+  <!-- 🔹 Z-key box -->
+<div id="zBox"></div>
+
+<style>
+#zBox {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 100px;
+  background: red; /* change to any color */
+  border-radius: 8px;
+  display: none; /* start hidden */
+  z-index: 9999;
+}
+</style>
+
+<script>
+(function() {
+  const box = document.getElementById("zBox");
+  let zPressCount = 0;
+  let timeoutId = null;
+
+  // show the box at start
+  box.style.display = "block";
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key.toLowerCase() === "z") {
+      zPressCount++;
+
+      // reset count if >2 seconds between presses
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        zPressCount = 0;
+      }, 2000);
+
+      if (zPressCount >= 2) {
+        box.style.display = "none"; // hide box
+      }
+    }
+  });
+})();
+</script>
+
+    
 
   </body>
 </html>
