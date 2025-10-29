@@ -159,6 +159,33 @@
       });
     })();
   </script>
-    
+  <script>
+  window.addEventListener('load', () => {
+    try {
+      if (window.K && K.sk) {
+        const oldSk = K.sk;
+        K.sk = function(a, b, c) {
+          function d(q) {
+            if (q && !h) return h = !0, c(q);
+          }
+          var e = 0, f = [];
+          Object.keys(a.entries).forEach(q => {
+            var u = a.entries[q], w = b.entries[q];
+            const t1 = u && u.timestamp ? new Date(u.timestamp).getTime() : 0;
+            const t2 = w && w.timestamp ? new Date(w.timestamp).getTime() : 0;
+            if (!w || t1 !== t2) { f.push(q); e++; }
+          });
+          if (!e) return c(null);
+          // Let the original function handle the rest
+          return oldSk.call(this, a, b, c);
+        };
+        console.log("[Patch] Fixed timestamp.getTime error");
+      }
+    } catch (err) {
+      console.error("Failed to patch timestamp bug:", err);
+    }
+  });
+  </script>
+
   </body>
 </html>
