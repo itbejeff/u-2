@@ -2385,7 +2385,8 @@ var z = {
             Object.keys(a.entries).forEach(function(q) {
                 var u = a.entries[q],
                     w = b.entries[q];
-                w && u.timestamp.getTime() == w.timestamp.getTime() || (f.push(q), e++)
+                w && new Date(u.timestamp).getTime() == new Date(w.timestamp).getTime()
+
             });
             var g = [];
             Object.keys(b.entries).forEach(function(q) {
