@@ -102,5 +102,63 @@
           console.error("Failed to merge files:", error);
       });
     </script>      
+    <div id="customConsole"></div>
+        <style>
+    #customConsole {
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      width: 300px;
+      height: 200px;
+      background: rgba(0,0,0,0.85);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 12px;
+      overflow-y: auto;
+      padding: 8px;
+      border-radius: 6px;
+      z-index: 99999;
+    }
+    </style>
+    <script>
+    (function() {
+      const oldLog = console.log;
+      const oldError = console.error;
+      const oldWarn = console.warn;
+      const logBox = document.getElementById('customConsole');
+
+      function addToBox(type, message) {
+        if (!logBox) return;
+        const line = document.createElement('div');
+        line.textContent = `[${type.toUpperCase()}] ${message}`;
+        line.style.color =
+          type === 'error' ? '#f55' :
+          type === 'warn'  ? '#ff5' :
+          '#0f0';
+        logBox.appendChild(line);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      console.log = function(...args) {
+        oldLog.apply(console, args);
+        addToBox('log', args.join(' '));
+      };
+
+      console.error = function(...args) {
+        oldError.apply(console, args);
+        addToBox('error', args.join(' '));
+      };
+
+      console.warn = function(...args) {
+        oldWarn.apply(console, args);
+        addToBox('warn', args.join(' '));
+      };
+
+      window.addEventListener('error', (event) => {
+        console.error(`${event.message} (${event.filename}:${event.lineno})`);
+      });
+    })();
+  </script>
+    
   </body>
 </html>
